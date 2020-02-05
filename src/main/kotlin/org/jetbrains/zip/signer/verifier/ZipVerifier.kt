@@ -6,8 +6,6 @@ import com.android.apksig.internal.apk.ApkSigningBlockUtils.SupportedSignature
 import com.android.apksig.internal.apk.ApkSigningBlockUtils.toHex
 import com.android.apksig.internal.apk.ContentDigestAlgorithm
 import com.android.apksig.internal.util.ByteBufferDataSource
-import com.android.apksig.internal.util.GuaranteedEncodedFormX509Certificate
-import com.android.apksig.internal.util.X509CertificateUtils
 import com.android.apksig.internal.zip.ZipUtils
 import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
@@ -17,6 +15,7 @@ import org.jetbrains.zip.signer.exceptions.PluginFormatException
 import org.jetbrains.zip.signer.exceptions.ZipFormatException
 import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSections
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -186,8 +185,7 @@ object ZipVerifier {
             val jcaSignatureAlgorithmParams =
                 signatureAlgorithm.jcaSignatureAlgorithmAndParams.second
             val keyAlgorithm = signatureAlgorithm.jcaKeyAlgorithm
-            var publicKey: PublicKey
-            publicKey = try {
+            val publicKey = try {
                 KeyFactory.getInstance(keyAlgorithm).generatePublic(
                     X509EncodedKeySpec(publicKeyBytes)
                 )
@@ -233,13 +231,9 @@ object ZipVerifier {
         var certificateIndex = -1
         while (certificates.hasRemaining()) {
             certificateIndex++
-            val encodedCert =
-                readLengthPrefixedByteArray(
-                    certificates
-                )
-            var certificate: X509Certificate
-            certificate = try {
-                X509CertificateUtils.generateCertificate(encodedCert, certFactory)
+            val encodedCert = readLengthPrefixedByteArray(certificates)
+            val certificate = try {
+                certFactory.generateCertificate(ByteArrayInputStream(encodedCert)) as X509Certificate
             } catch (e: CertificateException) {
                 result.addError(
                     Issue.V2_SIG_MALFORMED_CERTIFICATE,
@@ -249,11 +243,6 @@ object ZipVerifier {
                 )
                 return result
             }
-            // Wrap the cert so that the result's getEncoded returns exactly the original encoded
-// form. Without this, getEncoded may return a different form from what was stored in
-// the signature. This is because some X509Certificate(Factory) implementations
-// re-encode certificates.
-            certificate = GuaranteedEncodedFormX509Certificate(certificate, encodedCert)
             result.certs.add(certificate)
         }
         if (result.certs.isEmpty()) {
