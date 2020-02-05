@@ -31,9 +31,9 @@ import java.util.*
 import java.util.zip.ZipException
 
 object ZipVerifier {
-    fun verify(file: File) {
+    fun verify(file: File): List<ApkSigningBlockUtils.Result.SignerInfo> {
         RandomAccessFile(file, "r").use {
-            verify(
+            return verify(
                 DataSources.asDataSource(
                     it,
                     0,
@@ -43,7 +43,7 @@ object ZipVerifier {
         }
     }
 
-    private fun verify(dataSource: DataSource) {
+    private fun verify(dataSource: DataSource): List<ApkSigningBlockUtils.Result.SignerInfo> {
         val zipSections = try {
             findZipSections(dataSource)
         } catch (e: ZipFormatException) {
@@ -60,7 +60,7 @@ object ZipVerifier {
             signatureInfo.eocdOffset - signatureInfo.centralDirOffset
         )
         val eocd = signatureInfo.eocd
-        verify(
+        return verify(
             beforeApkSigningBlock,
             signatureInfo.signatureBlock,
             centralDir,
@@ -68,13 +68,12 @@ object ZipVerifier {
         )
     }
 
-    @Throws(IOException::class, NoSuchAlgorithmException::class)
     private fun verify(
         beforeApkSigningBlock: DataSource,
         apkSignatureSchemeV2Block: ByteBuffer,
         centralDir: DataSource,
         eocd: ByteBuffer
-    ) {
+    ): List<ApkSigningBlockUtils.Result.SignerInfo> {
         val contentDigestsToVerify = HashSet<ContentDigestAlgorithm>(1)
         val signers = parseSigners(
             apkSignatureSchemeV2Block,
@@ -83,6 +82,7 @@ object ZipVerifier {
         verifyIntegrity(
             beforeApkSigningBlock, centralDir, eocd, contentDigestsToVerify, signers
         )
+        return signers
     }
 
     @Throws(NoSuchAlgorithmException::class)

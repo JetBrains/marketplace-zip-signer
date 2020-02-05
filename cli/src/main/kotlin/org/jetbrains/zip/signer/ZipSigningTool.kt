@@ -68,9 +68,15 @@ object ZipSigningTool {
     private fun verify(params: Array<String>) {
         val options = VerifyOptions()
         Args.parseOrExit(options, params)
-//        if (options.printCertificates) {
-        ZipVerifier.verify(File(options.inputFilePath))
-//        }
+        val signers = ZipVerifier.verify(File(options.inputFilePath))
+        if (options.printCertificates) {
+            signers.forEachIndexed { signerIndex, signer ->
+                signer.certs.forEach { certificate ->
+                    println("Signer #${signerIndex}")
+                    println(certificate)
+                }
+            }
+        }
     }
 
     private fun loadPkcs8EncodedPrivateKey(spec: KeySpec): PrivateKey {
@@ -154,6 +160,6 @@ class SigningOptions {
 class VerifyOptions {
     @set:Argument("in", required = true, description = "Path to signed plugin zip/jar file")
     var inputFilePath: String = ""
-//    @set:Argument("print-certs", required = false, description = "Set this option to print zip certificates")
-//    var printCertificates: Boolean = false
+    @set:Argument("print-certs", required = false, description = "Set this option to print zip certificates")
+    var printCertificates: Boolean = false
 }
