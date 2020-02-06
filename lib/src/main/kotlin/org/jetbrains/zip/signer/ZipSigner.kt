@@ -82,7 +82,7 @@ object ZipSigner {
         )
         val signerBlocks = listOf(
             generateSignerBlock(
-                listOf(signerConfig.certificate), signerConfig.privateKey, signerConfig.algorithms, contentDigests
+                signerConfig.certificates, signerConfig.privateKey, signerConfig.algorithms, contentDigests
             )
         )
         val lengthPrefixedSignedBlocks =

@@ -5,7 +5,7 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
 class SignerConfig(
-    val certificate: X509Certificate,
+    val certificates: List<X509Certificate>,
     val privateKey: PrivateKey,
     val algorithms: List<SignatureAlgorithm>
 )

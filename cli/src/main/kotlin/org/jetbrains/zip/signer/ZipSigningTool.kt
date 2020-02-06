@@ -6,21 +6,16 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.util.io.pem.PemReader
 import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
 import org.jetbrains.zip.signer.verifier.ZipVerifier
-import org.jetbrains.zip.signer.x509.generateDummyCertificate
+import org.jetbrains.zip.signer.x509.X509CertificateUtils
 import java.io.File
 import java.io.IOException
-import java.math.BigInteger
-import java.nio.ByteBuffer
 import java.security.KeyFactory
 import java.security.PrivateKey
-import java.security.PublicKey
 import java.security.Security
-import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.KeySpec
 import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.RSAPublicKeySpec
-import java.util.*
 import kotlin.system.exitProcess
 
 
@@ -50,19 +45,40 @@ object ZipSigningTool {
         val keySpec = PemReader(File(options.privateKeyFile).bufferedReader()).readPemObject()
             ?: throw IOException("Failed to read PEM object from ${options.privateKeyFile}")
         val encodedKeySpec = PKCS8EncodedKeySpec(keySpec.content)
-        val privateKey =
-            loadPkcs8EncodedPrivateKey(encodedKeySpec)
-        val publicKey =
-            loadPublicKey(File(options.publicKeyFile))
-        val certificate =
-            generateDummyCertificate(privateKey, publicKey)
-        val signingAlgorithms =
-            getSuggestedSignatureAlgorithms(publicKey)
+        val privateKey = loadPkcs8EncodedPrivateKey(encodedKeySpec)
+        val certificates = loadCertificate(options, privateKey)
+        val signingAlgorithms = getSuggestedSignatureAlgorithms(certificates.first().publicKey)
         ZipSigner.sign(
             File(options.inputFilePath),
             File(options.outputFilePath),
-            SignerConfig(certificate, privateKey, signingAlgorithms)
+            SignerConfig(certificates, privateKey, signingAlgorithms)
         )
+    }
+
+    private fun loadCertificate(options: SigningOptions, privateKey: PrivateKey): List<X509Certificate> {
+        val certificateFile = options.certificateFile
+        val openSshPublicKeyFile = options.openSshPublicKeyFile
+        try {
+            return when {
+                certificateFile != null -> X509CertificateUtils.loadCertificateFromFile(
+                    File(certificateFile)
+                ).toList()
+                openSshPublicKeyFile != null -> listOf(
+                    X509CertificateUtils.loadOpenSshKeyAsDummyCertificate(
+                        File(openSshPublicKeyFile),
+                        privateKey
+                    )
+                )
+                else -> {
+                    throw IllegalArgumentException(
+                        "One of the following options must be specified: 'openssh-pub', 'cert'"
+                    )
+                }
+            }
+        } catch (e: IOException) {
+            System.err.println("Failed to load certificate: ${e.message}")
+            exitProcess(-1)
+        }
     }
 
     private fun verify(params: Array<String>) {
@@ -90,60 +106,6 @@ object ZipSigningTool {
         }
         throw InvalidKeySpecException("Not an RSA, or DSA private key")
     }
-
-    fun loadPublicCertificate(file: File): PublicKey {
-//        val pemObject = PemReader.readPemObject(file.bufferedReader())!!
-        val decodedCertificateContent = CertificateFactory.getInstance("X.509")
-            .generateCertificate(file.inputStream())
-        val base64Encoded = file.readText().substringAfter(" ").substringBefore(" ")
-        val decodedKeyByteBuffer = ByteBuffer.wrap(Base64.getDecoder().decode(base64Encoded))
-        val algorithmNameBytes = String(
-            readDataFromSshRsa(
-                decodedKeyByteBuffer
-            )
-        )
-        val publicExponent = BigInteger(
-            readDataFromSshRsa(
-                decodedKeyByteBuffer
-            )
-        )
-        val modulus = BigInteger(
-            readDataFromSshRsa(
-                decodedKeyByteBuffer
-            )
-        )
-
-        return KeyFactory.getInstance("RSA").generatePublic(RSAPublicKeySpec(modulus, publicExponent))
-    }
-
-    fun loadPublicKey(file: File): PublicKey {
-        val base64Encoded = file.readText().substringAfter(" ").substringBefore(" ")
-        val decodedKeyByteBuffer = ByteBuffer.wrap(Base64.getDecoder().decode(base64Encoded))
-        val algorithmNameBytes = String(
-            readDataFromSshRsa(
-                decodedKeyByteBuffer
-            )
-        )
-        val publicExponent = BigInteger(
-            readDataFromSshRsa(
-                decodedKeyByteBuffer
-            )
-        )
-        val modulus = BigInteger(
-            readDataFromSshRsa(
-                decodedKeyByteBuffer
-            )
-        )
-
-        return KeyFactory.getInstance("RSA").generatePublic(RSAPublicKeySpec(modulus, publicExponent))
-    }
-
-    fun readDataFromSshRsa(buffer: ByteBuffer): ByteArray {
-        val dataLength = buffer.int
-        val data = ByteArray(dataLength)
-        buffer.get(data)
-        return data
-    }
 }
 
 class SigningOptions {
@@ -153,8 +115,11 @@ class SigningOptions {
     var outputFilePath: String = ""
     @set:Argument("key", required = true, description = "Private key file")
     var privateKeyFile: String = ""
-    @set:Argument("pub", required = true, description = "Public key file")
-    var publicKeyFile: String = ""
+    @set:Argument("cert", required = false, description = "Certificate file")
+    var certificateFile: String? = null
+    @set:Argument("openssh-pub", required = false, description = "Open SSH public key file")
+    var openSshPublicKeyFile: String? = null
+
 }
 
 class VerifyOptions {
