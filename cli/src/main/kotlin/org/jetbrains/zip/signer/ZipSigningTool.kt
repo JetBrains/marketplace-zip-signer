@@ -6,6 +6,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.util.io.pem.PemReader
 import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
 import org.jetbrains.zip.signer.verifier.ZipVerifier
+import org.jetbrains.zip.signer.x509.KeystoreUtils
 import org.jetbrains.zip.signer.x509.X509CertificateUtils
 import java.io.File
 import java.io.IOException
@@ -42,11 +43,29 @@ object ZipSigningTool {
         val options = SigningOptions()
         Args.parseOrExit(options, params)
         Security.addProvider(BouncyCastleProvider())
-        val keySpec = PemReader(File(options.privateKeyFile).bufferedReader()).readPemObject()
-            ?: throw IOException("Failed to read PEM object from ${options.privateKeyFile}")
-        val encodedKeySpec = PKCS8EncodedKeySpec(keySpec.content)
-        val privateKey = loadPkcs8EncodedPrivateKey(encodedKeySpec)
-        val certificates = loadCertificate(options, privateKey)
+
+        val privateKey: PrivateKey
+        val certificates: List<X509Certificate>
+        if (options.keyStore != null) {
+            val password =
+                options.keyStorePassword ?: throw IllegalArgumentException("'ks-pass' property not specified")
+            with(
+                KeystoreUtils.loadPrivateKeyAndCertificateFromKeystore(
+                    File(options.keyStore),
+                    password,
+                    options.keyStoreAlias
+                )
+            ) {
+                privateKey = first
+                certificates = second
+            }
+        } else {
+            val keySpec = PemReader(File(options.privateKeyFile).bufferedReader()).readPemObject()
+                ?: throw IOException("Failed to read PEM object from ${options.privateKeyFile}")
+            val encodedKeySpec = PKCS8EncodedKeySpec(keySpec.content)
+            privateKey = loadPkcs8EncodedPrivateKey(encodedKeySpec)
+            certificates = loadCertificate(options, privateKey)
+        }
         val signingAlgorithms = getSuggestedSignatureAlgorithms(certificates.first().publicKey)
         ZipSigner.sign(
             File(options.inputFilePath),
@@ -113,13 +132,18 @@ class SigningOptions {
     var inputFilePath: String = ""
     @set:Argument("out", required = true, description = "Path to signed zip file")
     var outputFilePath: String = ""
-    @set:Argument("key", required = true, description = "Private key file")
+    @set:Argument("ks", required = false, description = "Keystore file")
+    var keyStore: String? = null
+    @set:Argument("ks-pass", required = false, description = "Keystore password")
+    var keyStorePassword: String? = null
+    @set:Argument("ks-key-alias", required = false, description = "Keystore key alias")
+    var keyStoreAlias: String? = null
+    @set:Argument("key", required = false, description = "Private key file")
     var privateKeyFile: String = ""
     @set:Argument("cert", required = false, description = "Certificate file")
     var certificateFile: String? = null
     @set:Argument("openssh-pub", required = false, description = "Open SSH public key file")
     var openSshPublicKeyFile: String? = null
-
 }
 
 class VerifyOptions {
