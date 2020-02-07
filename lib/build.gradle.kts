@@ -4,5 +4,6 @@ plugins {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    api("org.bouncycastle", "bcprov-jdk15on", "1.64")
+    api("org.bouncycastle", "bcpkix-jdk15on", "1.64")
 }
+

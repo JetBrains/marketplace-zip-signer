@@ -1,6 +1,7 @@
 package org.jetbrains.zip.signer.certificates
 
 import org.bouncycastle.x509.X509V3CertificateGenerator
+import org.jetbrains.zip.signer.bytes.getLengthPrefixedArray
 import java.io.File
 import java.math.BigInteger
 import java.nio.ByteBuffer
@@ -9,6 +10,9 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.security.interfaces.DSAPrivateKey
+import java.security.interfaces.RSAPrivateKey
+import java.security.spec.DSAPublicKeySpec
 import java.security.spec.RSAPublicKeySpec
 import java.time.Duration
 import java.time.Instant
@@ -26,26 +30,34 @@ object X509CertificateUtils {
     fun loadOpenSshKeyAsDummyCertificate(file: File, privateKey: PrivateKey): X509Certificate {
         val base64Encoded = file.readText().substringAfter(" ").substringBefore(" ")
         val decodedKeyByteBuffer = ByteBuffer.wrap(Base64.getDecoder().decode(base64Encoded))
-        val algorithmName = String(
-            readDataFromSshRsa(
-                decodedKeyByteBuffer
-            )
-        ).removePrefix("ssh-").toUpperCase()
-        val publicExponent = BigInteger(
-            readDataFromSshRsa(
-                decodedKeyByteBuffer
-            )
-        )
-        val modulus = BigInteger(
-            readDataFromSshRsa(
-                decodedKeyByteBuffer
-            )
-        )
+        val algorithmName = String(decodedKeyByteBuffer.getLengthPrefixedArray())
+            .removePrefix("ssh-")
+            .toUpperCase()
+        val publicKey = when (algorithmName) {
+            "RSA" -> getSshRsaPublicKey(decodedKeyByteBuffer)
+            "DSS" -> getSshDsaPublicKey(decodedKeyByteBuffer)
+            else -> throw IllegalArgumentException("Unsupported public key algorithm $algorithmName")
+        }
 
-        val publicKey = KeyFactory
-            .getInstance(algorithmName)
-            .generatePublic(RSAPublicKeySpec(modulus, publicExponent))
         return generateDummyCertificate(privateKey, publicKey)
+    }
+
+    private fun getSshRsaPublicKey(buffer: ByteBuffer): PublicKey {
+        val publicExponent = BigInteger(buffer.getLengthPrefixedArray())
+        val modulus = BigInteger(buffer.getLengthPrefixedArray())
+        return KeyFactory
+            .getInstance("RSA")
+            .generatePublic(RSAPublicKeySpec(modulus, publicExponent))
+    }
+
+    private fun getSshDsaPublicKey(buffer: ByteBuffer): PublicKey {
+        val p = BigInteger(buffer.getLengthPrefixedArray())
+        val q = BigInteger(buffer.getLengthPrefixedArray())
+        val g = BigInteger(buffer.getLengthPrefixedArray())
+        val y = BigInteger(buffer.getLengthPrefixedArray())
+        return KeyFactory
+            .getInstance("DSA")
+            .generatePublic(DSAPublicKeySpec(y, p, q, g))
     }
 
     private fun generateDummyCertificate(privateKey: PrivateKey, publicKey: PublicKey): X509Certificate {
@@ -61,14 +73,11 @@ object X509CertificateUtils {
             setNotAfter(farAwayDate)
             setSubjectDN(dummyName)
             setPublicKey(publicKey)
-            setSignatureAlgorithm("SHA256WithRSAEncryption")
+            when (privateKey) {
+                is RSAPrivateKey -> setSignatureAlgorithm("SHA256WithRSAEncryption")
+                is DSAPrivateKey -> setSignatureAlgorithm("SHA256WithDSA")
+                else -> throw IllegalArgumentException("Unsupported private key type")
+            }
         }.generate(privateKey)
-    }
-
-    private fun readDataFromSshRsa(buffer: ByteBuffer): ByteArray {
-        val dataLength = buffer.int
-        val data = ByteArray(dataLength)
-        buffer.get(data)
-        return data
     }
 }
