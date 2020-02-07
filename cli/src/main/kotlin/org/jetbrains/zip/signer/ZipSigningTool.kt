@@ -3,11 +3,11 @@ package org.jetbrains.zip.signer
 import com.sampullara.cli.Args
 import com.sampullara.cli.Argument
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.util.io.pem.PemReader
 import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
+import org.jetbrains.zip.signer.certificates.KeystoreUtils
+import org.jetbrains.zip.signer.certificates.PrivateKeyUtils
+import org.jetbrains.zip.signer.certificates.X509CertificateUtils
 import org.jetbrains.zip.signer.verifier.ZipVerifier
-import org.jetbrains.zip.signer.x509.KeystoreUtils
-import org.jetbrains.zip.signer.x509.X509CertificateUtils
 import java.io.File
 import java.io.IOException
 import java.security.KeyFactory
@@ -16,7 +16,6 @@ import java.security.Security
 import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.KeySpec
-import java.security.spec.PKCS8EncodedKeySpec
 import kotlin.system.exitProcess
 
 
@@ -60,10 +59,7 @@ object ZipSigningTool {
                 certificates = second
             }
         } else {
-            val keySpec = PemReader(File(options.privateKeyFile).bufferedReader()).readPemObject()
-                ?: throw IOException("Failed to read PEM object from ${options.privateKeyFile}")
-            val encodedKeySpec = PKCS8EncodedKeySpec(keySpec.content)
-            privateKey = loadPkcs8EncodedPrivateKey(encodedKeySpec)
+            privateKey = PrivateKeyUtils.loadPrivateKey(File(options.privateKeyFile), options.privateKeyPassword)
             certificates = loadCertificate(options, privateKey)
         }
         val signingAlgorithms = getSuggestedSignatureAlgorithms(certificates.first().publicKey)
@@ -139,7 +135,9 @@ class SigningOptions {
     @set:Argument("ks-key-alias", required = false, description = "Keystore key alias")
     var keyStoreAlias: String? = null
     @set:Argument("key", required = false, description = "Private key file")
-    var privateKeyFile: String = ""
+    var privateKeyFile: String? = null
+    @set:Argument("key-pass", required = false, description = "Private key password")
+    var privateKeyPassword: String? = null
     @set:Argument("cert", required = false, description = "Certificate file")
     var certificateFile: String? = null
     @set:Argument("openssh-pub", required = false, description = "Open SSH public key file")

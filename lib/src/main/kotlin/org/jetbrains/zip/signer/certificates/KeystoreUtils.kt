@@ -1,4 +1,4 @@
-package org.jetbrains.zip.signer.x509
+package org.jetbrains.zip.signer.certificates
 
 import java.io.File
 import java.security.KeyStore

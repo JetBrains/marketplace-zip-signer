@@ -1,4 +1,4 @@
-package org.jetbrains.zip.signer.x509
+package org.jetbrains.zip.signer.certificates
 
 import org.bouncycastle.x509.X509V3CertificateGenerator
 import java.io.File
@@ -26,11 +26,11 @@ object X509CertificateUtils {
     fun loadOpenSshKeyAsDummyCertificate(file: File, privateKey: PrivateKey): X509Certificate {
         val base64Encoded = file.readText().substringAfter(" ").substringBefore(" ")
         val decodedKeyByteBuffer = ByteBuffer.wrap(Base64.getDecoder().decode(base64Encoded))
-        val algorithmNameBytes = String(
+        val algorithmName = String(
             readDataFromSshRsa(
                 decodedKeyByteBuffer
             )
-        )
+        ).removePrefix("ssh-").toUpperCase()
         val publicExponent = BigInteger(
             readDataFromSshRsa(
                 decodedKeyByteBuffer
@@ -43,7 +43,7 @@ object X509CertificateUtils {
         )
 
         val publicKey = KeyFactory
-            .getInstance("RSA")
+            .getInstance(algorithmName)
             .generatePublic(RSAPublicKeySpec(modulus, publicExponent))
         return generateDummyCertificate(privateKey, publicKey)
     }
