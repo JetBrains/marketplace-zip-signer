@@ -4,18 +4,11 @@ import com.sampullara.cli.Args
 import com.sampullara.cli.Argument
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
-import org.jetbrains.zip.signer.certificates.KeystoreUtils
-import org.jetbrains.zip.signer.certificates.PrivateKeyUtils
-import org.jetbrains.zip.signer.certificates.X509CertificateUtils
+import org.jetbrains.zip.signer.keys.loadPrivateKeyAndCertificateFromKeystore
+import org.jetbrains.zip.signer.keys.loadPrivateKeyAndCertificatesFromFiles
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import java.io.File
-import java.io.IOException
-import java.security.KeyFactory
-import java.security.PrivateKey
 import java.security.Security
-import java.security.cert.X509Certificate
-import java.security.spec.InvalidKeySpecException
-import java.security.spec.KeySpec
 import kotlin.system.exitProcess
 
 
@@ -43,24 +36,20 @@ object ZipSigningTool {
         Args.parseOrExit(options, params)
         Security.addProvider(BouncyCastleProvider())
 
-        val privateKey: PrivateKey
-        val certificates: List<X509Certificate>
-        if (options.keyStore != null) {
+        val (privateKey, certificates) = if (options.keyStore != null) {
             val password =
                 options.keyStorePassword ?: throw IllegalArgumentException("'ks-pass' property not specified")
-            with(
-                KeystoreUtils.loadPrivateKeyAndCertificateFromKeystore(
-                    File(options.keyStore),
-                    password,
-                    options.keyStoreAlias
-                )
-            ) {
-                privateKey = first
-                certificates = second
-            }
+            loadPrivateKeyAndCertificateFromKeystore(
+                File(options.keyStore),
+                password,
+                options.keyStoreAlias
+            )
         } else {
-            privateKey = PrivateKeyUtils.loadPrivateKey(File(options.privateKeyFile), options.privateKeyPassword)
-            certificates = loadCertificate(options, privateKey)
+            loadPrivateKeyAndCertificatesFromFiles(
+                File(options.privateKeyFile),
+                options.certificateFile?.let { File(it) },
+                options.privateKeyPassword?.toCharArray()
+            )
         }
         val signingAlgorithms = getSuggestedSignatureAlgorithms(certificates.first().publicKey)
         ZipSigner.sign(
@@ -68,32 +57,6 @@ object ZipSigningTool {
             File(options.outputFilePath),
             SignerConfig(certificates, privateKey, signingAlgorithms)
         )
-    }
-
-    private fun loadCertificate(options: SigningOptions, privateKey: PrivateKey): List<X509Certificate> {
-        val certificateFile = options.certificateFile
-        val openSshPublicKeyFile = options.openSshPublicKeyFile
-        try {
-            return when {
-                certificateFile != null -> X509CertificateUtils.loadCertificateFromFile(
-                    File(certificateFile)
-                ).toList()
-                openSshPublicKeyFile != null -> listOf(
-                    X509CertificateUtils.loadOpenSshKeyAsDummyCertificate(
-                        File(openSshPublicKeyFile),
-                        privateKey
-                    )
-                )
-                else -> {
-                    throw IllegalArgumentException(
-                        "One of the following options must be specified: 'openssh-pub', 'cert'"
-                    )
-                }
-            }
-        } catch (e: IOException) {
-            System.err.println("Failed to load certificate: ${e.message}")
-            exitProcess(-1)
-        }
     }
 
     private fun verify(params: Array<String>) {
@@ -108,18 +71,6 @@ object ZipSigningTool {
                 }
             }
         }
-    }
-
-    private fun loadPkcs8EncodedPrivateKey(spec: KeySpec): PrivateKey {
-        try {
-            return KeyFactory.getInstance("RSA").generatePrivate(spec)
-        } catch (expected: InvalidKeySpecException) {
-        }
-        try {
-            return KeyFactory.getInstance("DSA").generatePrivate(spec)
-        } catch (expected: InvalidKeySpecException) {
-        }
-        throw InvalidKeySpecException("Not an RSA, or DSA private key")
     }
 }
 
@@ -140,8 +91,6 @@ class SigningOptions {
     var privateKeyPassword: String? = null
     @set:Argument("cert", required = false, description = "Certificate file")
     var certificateFile: String? = null
-    @set:Argument("openssh-pub", required = false, description = "Open SSH public key file")
-    var openSshPublicKeyFile: String? = null
 }
 
 class VerifyOptions {

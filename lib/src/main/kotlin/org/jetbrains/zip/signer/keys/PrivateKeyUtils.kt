@@ -1,4 +1,4 @@
-package org.jetbrains.zip.signer.certificates
+package org.jetbrains.zip.signer.keys
 
 import org.bouncycastle.openssl.PEMEncryptedKeyPair
 import org.bouncycastle.openssl.PEMKeyPair
@@ -7,25 +7,25 @@ import org.bouncycastle.openssl.PasswordException
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder
 import java.io.File
-import java.security.PrivateKey
+import java.security.KeyPair
 
 
 object PrivateKeyUtils {
     /**
      * @param file PEM file with private key
      */
-    fun loadPrivateKey(file: File, password: String?): PrivateKey {
+    fun loadKeyPair(file: File, password: CharArray?): KeyPair {
         val keyPair = PEMParser(file.bufferedReader()).readObject().let { pemObject ->
             when (pemObject) {
                 is PEMEncryptedKeyPair -> {
                     if (password == null) throw PasswordException("Can't read private key. Password is missing")
-                    val decryptorProvider = JcePEMDecryptorProviderBuilder().build(password.toCharArray())
+                    val decryptorProvider = JcePEMDecryptorProviderBuilder().build(password)
                     pemObject.decryptKeyPair(decryptorProvider)
                 }
                 is PEMKeyPair -> pemObject
                 else -> throw IllegalArgumentException("Failed to parse private key from $file")
             }
         }
-        return JcaPEMKeyConverter().getPrivateKey(keyPair.privateKeyInfo)
+        return JcaPEMKeyConverter().getKeyPair(keyPair)
     }
 }
