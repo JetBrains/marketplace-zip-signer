@@ -19,4 +19,7 @@ tasks {
             attributes(mapOf("Main-Class" to "org.jetbrains.zip.signer.ZipSigningTool"))
         }
     }
+    shadowJar {
+        archiveName = "zip-signer.jar"
+    }
 }
