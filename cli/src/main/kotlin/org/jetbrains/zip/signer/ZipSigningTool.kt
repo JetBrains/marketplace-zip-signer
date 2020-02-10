@@ -40,9 +40,11 @@ object ZipSigningTool {
             val password =
                 options.keyStorePassword ?: throw IllegalArgumentException("'ks-pass' property not specified")
             loadPrivateKeyAndCertificateFromKeystore(
-                File(options.keyStore),
-                password,
-                options.keyStoreAlias
+                file = File(options.keyStore),
+                password = password.toCharArray(),
+                keystoreKeyAlias = options.keyStoreAlias,
+                keystoreType = options.keyStoreType,
+                keystoreProviderName = options.keyStoreProviderName
             )
         } else {
             loadPrivateKeyAndCertificatesFromFiles(
@@ -79,12 +81,16 @@ class SigningOptions {
     var inputFilePath: String = ""
     @set:Argument("out", required = true, description = "Path to signed zip file")
     var outputFilePath: String = ""
-    @set:Argument("ks", required = false, description = "Keystore file")
+    @set:Argument("ks", required = false, description = "KeyStore file")
     var keyStore: String? = null
-    @set:Argument("ks-pass", required = false, description = "Keystore password")
+    @set:Argument("ks-pass", required = false, description = "KeyStore password")
     var keyStorePassword: String? = null
-    @set:Argument("ks-key-alias", required = false, description = "Keystore key alias")
+    @set:Argument("ks-key-alias", required = false, description = "KeyStore key alias")
     var keyStoreAlias: String? = null
+    @set:Argument("ks-type", required = false, description = "KeyStore type")
+    var keyStoreType: String? = null
+    @set:Argument("ks-provider-name", required = false, description = "JCA KeyStore Provider name")
+    var keyStoreProviderName: String? = null
     @set:Argument("key", required = false, description = "Private key file")
     var privateKeyFile: String? = null
     @set:Argument("key-pass", required = false, description = "Private key password")
