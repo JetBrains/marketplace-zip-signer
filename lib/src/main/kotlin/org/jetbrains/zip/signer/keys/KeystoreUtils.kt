@@ -1,5 +1,6 @@
 package org.jetbrains.zip.signer.keys
 
+import org.jetbrains.zip.signer.SignerInfo
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
@@ -16,10 +17,10 @@ object KeystoreUtils {
     }
 }
 
-fun KeyStore.getPrivateKeyAndCertificateFromKeystore(
+fun KeyStore.getSignerInfo(
     password: CharArray,
     alias: String?
-): Pair<PrivateKey, List<X509Certificate>> {
+): SignerInfo {
     val definedKeyAlias = alias ?: getSingleKeyEntryAlias()
     if (!isKeyEntry(definedKeyAlias)) {
         throw IllegalArgumentException(
@@ -33,7 +34,7 @@ fun KeyStore.getPrivateKeyAndCertificateFromKeystore(
             "Keystore '$definedKeyAlias' does not contain certificates"
         )
     }
-    return key to certificateChain
+    return SignerInfo(certificateChain, key)
 }
 
 private fun KeyStore.getSingleKeyEntryAlias(): String? {

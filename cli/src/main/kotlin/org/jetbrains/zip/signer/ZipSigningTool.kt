@@ -3,9 +3,7 @@ package org.jetbrains.zip.signer
 import com.sampullara.cli.Args
 import com.sampullara.cli.Argument
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
-import org.jetbrains.zip.signer.keys.loadPrivateKeyAndCertificateFromKeystore
-import org.jetbrains.zip.signer.keys.loadPrivateKeyAndCertificatesFromFiles
+import org.jetbrains.zip.signer.keys.SignerInfoLoader
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import java.io.File
 import java.security.Security
@@ -36,10 +34,10 @@ object ZipSigningTool {
         Args.parseOrExit(options, params)
         Security.addProvider(BouncyCastleProvider())
 
-        val (privateKey, certificates) = if (options.keyStore != null) {
+        val signerInfo = if (options.keyStore != null) {
             val password =
                 options.keyStorePassword ?: throw IllegalArgumentException("'ks-pass' property not specified")
-            loadPrivateKeyAndCertificateFromKeystore(
+            SignerInfoLoader.loadSignerInfoFromKeystore(
                 file = File(options.keyStore),
                 password = password.toCharArray(),
                 keystoreKeyAlias = options.keyStoreAlias,
@@ -47,17 +45,17 @@ object ZipSigningTool {
                 keystoreProviderName = options.keyStoreProviderName
             )
         } else {
-            loadPrivateKeyAndCertificatesFromFiles(
+            SignerInfoLoader.loadSignerInfoFromFiles(
                 File(options.privateKeyFile),
                 options.certificateFile?.let { File(it) },
                 options.privateKeyPassword?.toCharArray()
             )
         }
-        val signingAlgorithms = getSuggestedSignatureAlgorithms(certificates.first().publicKey)
+
         ZipSigner.sign(
             File(options.inputFilePath),
             File(options.outputFilePath),
-            SignerConfig(certificates, privateKey, signingAlgorithms)
+            signerInfo
         )
     }
 

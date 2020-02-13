@@ -7,6 +7,7 @@ import com.android.apksig.util.DataSink
 import com.android.apksig.util.DataSinks
 import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
+import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
 import org.jetbrains.zip.signer.constants.SIGNATURE_SCHEME_BLOCK_ID
 import org.jetbrains.zip.signer.exceptions.PluginFormatException
 import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
@@ -26,7 +27,7 @@ object ZipSigner {
     fun sign(
         inputFile: File,
         outputFile: File,
-        signerConfig: SignerConfig
+        signerInfo: SignerInfo
     ) {
         RandomAccessFile(inputFile, "r").use { inputRandomAccessFile ->
             RandomAccessFile(outputFile, "rw").use { outputRandomAccessFile ->
@@ -34,7 +35,7 @@ object ZipSigner {
                 sign(
                     inputDataSource = DataSources.asDataSource(inputRandomAccessFile),
                     outputDataSink = DataSinks.asDataSink(outputRandomAccessFile),
-                    signerConfig = signerConfig
+                    signerInfo = signerInfo
                 )
             }
         }
@@ -43,7 +44,7 @@ object ZipSigner {
     private fun sign(
         inputDataSource: DataSource,
         outputDataSink: DataSink,
-        signerConfig: SignerConfig
+        signerInfo: SignerInfo
     ) {
         val inputZipSections = try {
             org.jetbrains.zip.signer.zip.ZipUtils.findZipSections(inputDataSource)
@@ -68,8 +69,10 @@ object ZipSigner {
             if (inputApkSigningBlockOffset != -1L) inputApkSigningBlockOffset else inputZipSections.zipCentralDirectoryOffset
         )
 
+        val algorithms = getSuggestedSignatureAlgorithms(signerInfo.certificates.first().publicKey)
+
         val contentDigests = computeContentDigests(
-            signerConfig.algorithms.map { it.contentDigestAlgorithm },
+            algorithms.map { it.contentDigestAlgorithm },
             inputDataSource.slice(0, inputZipSections.zipCentralDirectoryOffset),
             inputDataSource.slice(
                 inputZipSections.zipCentralDirectoryOffset,
@@ -82,7 +85,7 @@ object ZipSigner {
         )
         val signerBlocks = listOf(
             generateSignerBlock(
-                signerConfig.certificates, signerConfig.privateKey, signerConfig.algorithms, contentDigests
+                signerInfo.certificates, signerInfo.privateKey, algorithms, contentDigests
             )
         )
         val lengthPrefixedSignedBlocks =
