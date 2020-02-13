@@ -1,5 +1,6 @@
 package org.jetbrains.zip.signer.keys
 
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.jetbrains.zip.signer.SignerInfo
 import java.io.File
 
@@ -29,6 +30,6 @@ object SignerInfoLoader {
                 X509CertificateUtils.generateDummyCertificate(keyPair)
             )
         }
-        return SignerInfo(certificates, keyPair.private)
+        return SignerInfo(certificates, JcaPEMKeyConverter().getPrivateKey(keyPair.privateKeyInfo))
     }
 }

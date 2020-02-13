@@ -1,19 +1,28 @@
 package org.jetbrains.zip.signer.keys
 
-import org.bouncycastle.x509.X509V3CertificateGenerator
+import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier
+import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
+import org.bouncycastle.cert.X509v3CertificateBuilder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.crypto.params.DSAPrivateKeyParameters
+import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters
+import org.bouncycastle.crypto.util.PrivateKeyFactory
+import org.bouncycastle.openssl.PEMKeyPair
+import org.bouncycastle.operator.bc.BcDSAContentSignerBuilder
+import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder
 import java.io.File
 import java.math.BigInteger
-import java.security.KeyPair
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.security.interfaces.DSAPrivateKey
-import java.security.interfaces.RSAPrivateKey
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.*
-import javax.security.auth.x500.X500Principal
+
 
 object X509CertificateUtils {
     fun loadCertificatesFromFile(file: File): List<X509Certificate> {
@@ -21,24 +30,33 @@ object X509CertificateUtils {
         return certificateFactory.generateCertificates(file.inputStream().buffered()).map { it as X509Certificate }
     }
 
-    fun generateDummyCertificate(keyPair: KeyPair): X509Certificate {
-        val dummyName = X500Principal("CN=Dummy Certificate")
-
+    fun generateDummyCertificate(keyPair: PEMKeyPair): X509Certificate {
+        val dummyName = X500Name("CN=Dummy Certificate")
         val yesterday = Date.from(Instant.now().minus(Duration.ofDays(1)))
         val farAwayDate = Date.from(LocalDate.of(9999, 12, 31).atStartOfDay().toInstant(ZoneOffset.UTC))
+        val contentSigner = when (val privateKey = PrivateKeyFactory.createKey(keyPair.privateKeyInfo)) {
+            is RSAPrivateCrtKeyParameters -> BcRSAContentSignerBuilder(
+                AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption),
+                AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256)
+            ).build(privateKey)
+            is DSAPrivateKeyParameters -> BcDSAContentSignerBuilder(
+                AlgorithmIdentifier(X9ObjectIdentifiers.id_dsa),
+                AlgorithmIdentifier(NISTObjectIdentifiers.id_sha256)
+            ).build(privateKey)
+            else -> throw IllegalArgumentException("Unsupported key type: ${privateKey::class.java.simpleName}")
+        }
 
-        return X509V3CertificateGenerator().apply {
-            setSerialNumber(BigInteger.valueOf(System.currentTimeMillis()))
-            setIssuerDN(dummyName)
-            setNotBefore(yesterday)
-            setNotAfter(farAwayDate)
-            setSubjectDN(dummyName)
-            setPublicKey(keyPair.public)
-            when (keyPair.private) {
-                is RSAPrivateKey -> setSignatureAlgorithm("SHA256WithRSAEncryption")
-                is DSAPrivateKey -> setSignatureAlgorithm("SHA256WithDSA")
-                else -> throw IllegalArgumentException("Unsupported private key type")
-            }
-        }.generate(keyPair.private)
+        return JcaX509CertificateConverter()
+            .setProvider("BC")
+            .getCertificate(
+                X509v3CertificateBuilder(
+                    dummyName,
+                    BigInteger.valueOf(System.currentTimeMillis()),
+                    yesterday,
+                    farAwayDate,
+                    dummyName,
+                    keyPair.publicKeyInfo
+                ).build(contentSigner)
+            )
     }
 }
