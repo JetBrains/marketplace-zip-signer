@@ -1,0 +1,23 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "5.2.0"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "com.github.spullara.cli-parser:cli-parser:1.1.2"
+    implementation project(":lib")
+}
+
+tasks {
+    jar {
+        manifest {
+            attributes(["Main-Class": "org.jetbrains.zip.signer.ZipSigningTool"])
+        }
+    }
+    shadowJar {
+        archiveName = "zip-signer.jar"
+    }
+}
