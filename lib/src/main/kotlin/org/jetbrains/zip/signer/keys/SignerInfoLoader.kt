@@ -2,7 +2,9 @@ package org.jetbrains.zip.signer.keys
 
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.jetbrains.zip.signer.SignerInfo
+import org.jetbrains.zip.signer.utils.SecurityUtils
 import java.io.File
+
 
 object SignerInfoLoader {
     fun loadSignerInfoFromKeystore(
@@ -23,6 +25,7 @@ object SignerInfoLoader {
         certificateFile: File? = null,
         privateKeyPassword: CharArray? = null
     ): SignerInfo {
+        SecurityUtils.addBouncyCastleProviderIfMissing()
         val keyPair = PrivateKeyUtils.loadKeyPair(privateKeyFile, privateKeyPassword)
         val certificates = when {
             certificateFile != null -> X509CertificateUtils.loadCertificatesFromFile(certificateFile)
