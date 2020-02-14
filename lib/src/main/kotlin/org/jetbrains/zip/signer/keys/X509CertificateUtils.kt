@@ -47,7 +47,6 @@ object X509CertificateUtils {
         }
 
         return JcaX509CertificateConverter()
-            .setProvider("BC")
             .getCertificate(
                 X509v3CertificateBuilder(
                     dummyName,

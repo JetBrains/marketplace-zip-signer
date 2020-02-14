@@ -2,11 +2,9 @@ package org.jetbrains.zip.signer
 
 import com.sampullara.cli.Args
 import com.sampullara.cli.Argument
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.jetbrains.zip.signer.keys.SignerInfoLoader
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import java.io.File
-import java.security.Security
 import kotlin.system.exitProcess
 
 
@@ -32,7 +30,6 @@ object ZipSigningTool {
     private fun sign(params: Array<String>) {
         val options = SigningOptions()
         Args.parseOrExit(options, params)
-        Security.addProvider(BouncyCastleProvider())
 
         val signerInfo = if (options.keyStore != null) {
             val password =
