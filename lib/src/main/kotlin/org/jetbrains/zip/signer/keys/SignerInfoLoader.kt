@@ -10,13 +10,14 @@ object SignerInfoLoader {
     fun loadSignerInfoFromKeystore(
         file: File,
         password: CharArray,
-        keystoreKeyAlias: String?,
+        keyPassword: CharArray? = null,
+        keystoreKeyAlias: String? = null,
         keystoreType: String? = null,
         keystoreProviderName: String? = null
     ): SignerInfo {
         val keyStore = KeystoreUtils.getKeyStore(keystoreType, keystoreProviderName)
         keyStore.load(file.inputStream().buffered(), password)
-        return keyStore.getSignerInfo(password, keystoreKeyAlias)
+        return keyStore.getSignerInfo(keyPassword ?: password, keystoreKeyAlias)
     }
 
     @JvmOverloads

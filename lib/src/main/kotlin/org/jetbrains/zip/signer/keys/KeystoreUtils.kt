@@ -18,7 +18,7 @@ object KeystoreUtils {
 }
 
 fun KeyStore.getSignerInfo(
-    password: CharArray,
+    keyPassword: CharArray,
     alias: String?
 ): SignerInfo {
     val definedKeyAlias = alias ?: getSingleKeyEntryAlias()
@@ -27,7 +27,7 @@ fun KeyStore.getSignerInfo(
             "Keystore entry '$definedKeyAlias' does not contain a key"
         )
     }
-    val key = getKey(definedKeyAlias, password) as PrivateKey
+    val key = getKey(definedKeyAlias, keyPassword) as PrivateKey
     val certificateChain = getCertificateChain(definedKeyAlias).map { it as X509Certificate }
     if (certificateChain.isNullOrEmpty()) {
         throw IllegalArgumentException(
