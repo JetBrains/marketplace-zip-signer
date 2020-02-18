@@ -12,7 +12,8 @@ import com.android.apksig.util.DataSources
 import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm.Companion.findById
 import org.jetbrains.zip.signer.constants.SIGNATURE_SCHEME_BLOCK_ID
 import org.jetbrains.zip.signer.exceptions.PluginFormatException
-import org.jetbrains.zip.signer.exceptions.ZipFormatException
+import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
+import org.jetbrains.zip.signer.signing.SigningBlockUtils
 import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSections
 import java.io.ByteArrayInputStream
@@ -28,7 +29,6 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.spec.X509EncodedKeySpec
 import java.util.*
-import java.util.zip.ZipException
 
 object ZipVerifier {
     fun verify(file: File): List<ApkSigningBlockUtils.Result.SignerInfo> {
@@ -44,27 +44,22 @@ object ZipVerifier {
     }
 
     private fun verify(dataSource: DataSource): List<ApkSigningBlockUtils.Result.SignerInfo> {
-        val zipSections = try {
-            findZipSections(dataSource)
-        } catch (e: ZipFormatException) {
-            throw ZipException("Not a ZIP archive")
-        }
-
-        val signatureInfo = ApkSigningBlockUtils.findSignature(
-            dataSource, zipSections,
-            SIGNATURE_SCHEME_BLOCK_ID
-        )
-        val beforeApkSigningBlock = dataSource.slice(0, signatureInfo.apkSigningBlockOffset)
+        val zipSections = findZipSections(dataSource)
+        val signingBlock = SigningBlockUtils.findZipSigningBlock(dataSource, zipSections)
+            ?: throw SigningBlockNotFoundException("Failed to get signature from zip archive")
+        val signatureInfo = ApkSigningBlockUtils.findApkSignatureSchemeBlock(
+            signingBlock.content, SIGNATURE_SCHEME_BLOCK_ID
+        ) ?: throw SigningBlockNotFoundException("Failed to get signature from zip archive")
+        val beforeApkSigningBlock = dataSource.slice(0, signingBlock.startOffset)
         val centralDir = dataSource.slice(
-            signatureInfo.centralDirOffset,
-            signatureInfo.eocdOffset - signatureInfo.centralDirOffset
+            zipSections.zipCentralDirectoryOffset,
+            zipSections.zipEndOfCentralDirectoryOffset - zipSections.zipCentralDirectoryOffset
         )
-        val eocd = signatureInfo.eocd
         return verify(
             beforeApkSigningBlock,
-            signatureInfo.signatureBlock,
+            signatureInfo,
             centralDir,
-            eocd
+            zipSections.zipEndOfCentralDirectory
         )
     }
 

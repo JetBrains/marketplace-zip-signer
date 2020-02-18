@@ -1,6 +1,5 @@
 package org.jetbrains.zip.signer
 
-import com.android.apksig.internal.apk.ApkUtils
 import com.android.apksig.internal.zip.CentralDirectoryRecord
 import com.android.apksig.internal.zip.ZipUtils
 import com.android.apksig.util.DataSink
@@ -10,12 +9,8 @@ import com.android.apksig.util.DataSources
 import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
 import org.jetbrains.zip.signer.constants.SIGNATURE_SCHEME_BLOCK_ID
 import org.jetbrains.zip.signer.exceptions.PluginFormatException
-import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
 import org.jetbrains.zip.signer.exceptions.ZipFormatException
-import org.jetbrains.zip.signer.signing.computeContentDigests
-import org.jetbrains.zip.signer.signing.encodeAsSequenceOfLengthPrefixedElements
-import org.jetbrains.zip.signer.signing.generateSignerBlock
-import org.jetbrains.zip.signer.signing.generateSigningBlock
+import org.jetbrains.zip.signer.signing.*
 import org.jetbrains.zip.signer.zip.ZipSections
 import java.io.File
 import java.io.RandomAccessFile
@@ -46,28 +41,8 @@ object ZipSigner {
         outputDataSink: DataSink,
         signerInfo: SignerInfo
     ) {
-        val inputZipSections = try {
-            org.jetbrains.zip.signer.zip.ZipUtils.findZipSections(inputDataSource)
-        } catch (e: ZipFormatException) {
-            throw PluginFormatException(
-                "Malformed APK: not a ZIP archive",
-                e
-            )
-        }
-        var inputApkSigningBlockOffset = -1L
-        var inputApkSigningBlock: DataSource? = null
-        try {
-            val apkSigningBlockInfo = ApkUtils.findApkSigningBlock(inputDataSource, inputZipSections)
-            inputApkSigningBlockOffset = apkSigningBlockInfo.startOffset
-            inputApkSigningBlock = apkSigningBlockInfo.contents
-        } catch (e: SigningBlockNotFoundException) { // Input APK does not contain an APK Signing Block. That's OK. APKs are not required to
-// contain this block. It's only needed if the APK is signed using APK Signature Scheme
-// v2 and/or v3.
-        }
-        val inputApkLfhSection: DataSource = inputDataSource.slice(
-            0,
-            if (inputApkSigningBlockOffset != -1L) inputApkSigningBlockOffset else inputZipSections.zipCentralDirectoryOffset
-        )
+        val inputZipSections = org.jetbrains.zip.signer.zip.ZipUtils.findZipSections(inputDataSource)
+        val signingBlockInfo = SigningBlockUtils.findZipSigningBlock(inputDataSource, inputZipSections)
 
         val algorithms = getSuggestedSignatureAlgorithms(signerInfo.certificates.first().publicKey)
 

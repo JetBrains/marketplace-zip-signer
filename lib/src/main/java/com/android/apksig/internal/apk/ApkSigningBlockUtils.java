@@ -17,15 +17,11 @@
 package com.android.apksig.internal.apk;
 
 
-import com.android.apksig.util.DataSource;
 import kotlin.Pair;
 import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm;
-import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException;
 import org.jetbrains.zip.signer.verifier.Issue;
 import org.jetbrains.zip.signer.verifier.IssueWithParams;
-import org.jetbrains.zip.signer.zip.ZipSections;
 
-import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -165,46 +161,6 @@ public class ApkSigningBlockUtils {
         }
         return sb.toString();
     }
-
-    /**
-     * Returns the APK Signature Scheme block contained in the provided APK file for the given ID
-     * and the additional information relevant for verifying the block against the file.
-     *
-     * @param blockId the ID value in the APK Signing Block's sequence of ID-value pairs
-     *                identifying the appropriate block to find, e.g. the APK Signature Scheme v2
-     *                block ID.
-     * @throws SignatureNotFoundException if the APK is not signed using given APK Signature Scheme
-     * @throws IOException                if an I/O error occurs while reading the APK
-     */
-    public static SignatureInfo findSignature(
-            DataSource apk, ZipSections zipSections, int blockId)
-            throws IOException, SignatureNotFoundException {
-        // Find the APK Signing Block.
-        DataSource apkSigningBlock;
-        long apkSigningBlockOffset;
-        try {
-            ApkUtils.ApkSigningBlock apkSigningBlockInfo =
-                    ApkUtils.findApkSigningBlock(apk, zipSections);
-            apkSigningBlockOffset = apkSigningBlockInfo.getStartOffset();
-            apkSigningBlock = apkSigningBlockInfo.getContents();
-        } catch (SigningBlockNotFoundException e) {
-            throw new SignatureNotFoundException(e.getMessage(), e);
-        }
-        ByteBuffer apkSigningBlockBuf =
-                apkSigningBlock.getByteBuffer(0, (int) apkSigningBlock.size());
-        apkSigningBlockBuf.order(ByteOrder.LITTLE_ENDIAN);
-
-        // Find the APK Signature Scheme Block inside the APK Signing Block.
-        ByteBuffer apkSignatureSchemeBlock =
-                findApkSignatureSchemeBlock(apkSigningBlockBuf, blockId);
-        return new SignatureInfo(
-                apkSignatureSchemeBlock,
-                apkSigningBlockOffset,
-                zipSections.getZipCentralDirectoryOffset(),
-                zipSections.getZipEndOfCentralDirectoryOffset(),
-                zipSections.getZipEndOfCentralDirectory());
-    }
-
 
     public static class SignatureNotFoundException extends Exception {
         private static final long serialVersionUID = 1L;
