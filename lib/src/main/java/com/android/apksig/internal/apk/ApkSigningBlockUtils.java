@@ -17,7 +17,6 @@
 package com.android.apksig.internal.apk;
 
 
-import kotlin.Pair;
 import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm;
 import org.jetbrains.zip.signer.verifier.Issue;
 import org.jetbrains.zip.signer.verifier.IssueWithParams;
@@ -25,9 +24,7 @@ import org.jetbrains.zip.signer.verifier.IssueWithParams;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.*;
 import java.security.cert.X509Certificate;
-import java.security.spec.AlgorithmParameterSpec;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -172,85 +169,6 @@ public class ApkSigningBlockUtils {
         public SignatureNotFoundException(String message, Throwable cause) {
             super(message, cause);
         }
-    }
-
-    /**
-     * uses the SignatureAlgorithms in the provided signerConfig to sign the provided data
-     *
-     * @return list of signature algorithm IDs and their corresponding signatures over the data.
-     */
-    public static List<Pair<Integer, byte[]>> generateSignaturesOverData(
-            SignerConfig signerConfig, byte[] data)
-            throws InvalidKeyException, NoSuchAlgorithmException, SignatureException {
-        List<Pair<Integer, byte[]>> signatures =
-                new ArrayList<>(signerConfig.signatureAlgorithms.size());
-        PublicKey publicKey = signerConfig.certificates.get(0).getPublicKey();
-        for (SignatureAlgorithm signatureAlgorithm : signerConfig.signatureAlgorithms) {
-            Pair<String, ? extends AlgorithmParameterSpec> sigAlgAndParams =
-                    signatureAlgorithm.getJcaSignatureAlgorithmAndParams();
-            String jcaSignatureAlgorithm = sigAlgAndParams.getFirst();
-            AlgorithmParameterSpec jcaSignatureAlgorithmParams = sigAlgAndParams.getSecond();
-            byte[] signatureBytes;
-            try {
-                Signature signature = Signature.getInstance(jcaSignatureAlgorithm);
-                signature.initSign(signerConfig.privateKey);
-                if (jcaSignatureAlgorithmParams != null) {
-                    signature.setParameter(jcaSignatureAlgorithmParams);
-                }
-                signature.update(data);
-                signatureBytes = signature.sign();
-            } catch (InvalidKeyException e) {
-                throw new InvalidKeyException("Failed to sign using " + jcaSignatureAlgorithm, e);
-            } catch (InvalidAlgorithmParameterException | SignatureException e) {
-                throw new SignatureException("Failed to sign using " + jcaSignatureAlgorithm, e);
-            }
-
-            try {
-                Signature signature = Signature.getInstance(jcaSignatureAlgorithm);
-                signature.initVerify(publicKey);
-                if (jcaSignatureAlgorithmParams != null) {
-                    signature.setParameter(jcaSignatureAlgorithmParams);
-                }
-                signature.update(data);
-                if (!signature.verify(signatureBytes)) {
-                    throw new SignatureException("Failed to verify generated "
-                            + jcaSignatureAlgorithm
-                            + " signature using public key from certificate");
-                }
-            } catch (InvalidKeyException e) {
-                throw new InvalidKeyException(
-                        "Failed to verify generated " + jcaSignatureAlgorithm + " signature using"
-                                + " public key from certificate", e);
-            } catch (InvalidAlgorithmParameterException | SignatureException e) {
-                throw new SignatureException(
-                        "Failed to verify generated " + jcaSignatureAlgorithm + " signature using"
-                                + " public key from certificate", e);
-            }
-
-            signatures.add(new Pair(signatureAlgorithm.getId(), signatureBytes));
-        }
-        return signatures;
-    }
-
-    /**
-     * Signer configuration.
-     */
-    public static class SignerConfig {
-        /**
-         * Private key.
-         */
-        public PrivateKey privateKey;
-
-        /**
-         * Certificates, with the first certificate containing the public key corresponding to
-         * {@link #privateKey}.
-         */
-        public List<X509Certificate> certificates;
-
-        /**
-         * List of signature algorithms with which to sign.
-         */
-        public List<SignatureAlgorithm> signatureAlgorithms;
     }
 
 
