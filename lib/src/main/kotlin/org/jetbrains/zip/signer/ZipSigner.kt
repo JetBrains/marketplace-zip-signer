@@ -7,10 +7,13 @@ import com.android.apksig.util.DataSinks
 import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
 import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
-import org.jetbrains.zip.signer.constants.SIGNATURE_SCHEME_BLOCK_ID
 import org.jetbrains.zip.signer.exceptions.PluginFormatException
 import org.jetbrains.zip.signer.exceptions.ZipFormatException
-import org.jetbrains.zip.signer.signing.*
+import org.jetbrains.zip.signer.proto.ZipSignatureSchemeContentProto
+import org.jetbrains.zip.signer.proto.ZipSignatureSchemeProto
+import org.jetbrains.zip.signer.signing.SigningBlockUtils
+import org.jetbrains.zip.signer.signing.computeContentDigests
+import org.jetbrains.zip.signer.signing.generateSignerBlock
 import org.jetbrains.zip.signer.zip.ZipSections
 import java.io.File
 import java.io.RandomAccessFile
@@ -42,7 +45,7 @@ object ZipSigner {
         signerInfo: SignerInfo
     ) {
         val inputZipSections = org.jetbrains.zip.signer.zip.ZipUtils.findZipSections(inputDataSource)
-        val signingBlockInfo = SigningBlockUtils.findZipSigningBlock(inputDataSource, inputZipSections)
+        val inputSigningBlock = SigningBlockUtils.findZipSigningBlock(inputDataSource, inputZipSections)
 
         val algorithms = getSuggestedSignatureAlgorithms(signerInfo.certificates.first().publicKey)
 
@@ -63,16 +66,18 @@ object ZipSigner {
                 signerInfo.certificates, signerInfo.privateKey, algorithms, contentDigests
             )
         )
-        val lengthPrefixedSignedBlocks =
-            encodeAsSequenceOfLengthPrefixedElements(
-                listOf(
-                    encodeAsSequenceOfLengthPrefixedElements(
-                        signerBlocks
-                    )
-                )
+
+        val signatureScheme = ZipSignatureSchemeProto
+            .newBuilder()
+            .setSignatureSchemeVersion(1)
+            .setContent(
+                ZipSignatureSchemeContentProto
+                    .newBuilder()
+                    .addAllSignatures(signerBlocks)
             )
-        val signingBlock = generateSigningBlock(
-            listOf(lengthPrefixedSignedBlocks to SIGNATURE_SCHEME_BLOCK_ID)
+            .build()
+        val signingBlock = SigningBlockUtils.generateSigningBlock(
+            signatureScheme.toByteArray()
         )
 
         val eocdOffset = inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes

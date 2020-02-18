@@ -235,7 +235,6 @@ public class ApkSigningBlockUtils {
             public Map<ContentDigestAlgorithm, byte[]> verifiedContentDigests = new HashMap<>();
             public List<Signature> signatures = new ArrayList<>();
             public Map<SignatureAlgorithm, byte[]> verifiedSignatures = new HashMap<>();
-            public byte[] signedData;
 
             private final List<IssueWithParams> mWarnings = new ArrayList<>();
             private final List<IssueWithParams> mErrors = new ArrayList<>();

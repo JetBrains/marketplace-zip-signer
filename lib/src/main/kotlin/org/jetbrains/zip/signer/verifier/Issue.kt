@@ -365,7 +365,7 @@ enum class Issue(
      *  * Parameter 3: error details (`Throwable`)
      *
      */
-    V2_SIG_MALFORMED_CERTIFICATE("Malformed certificate #%2\$d: %3\$s"),
+    V2_SIG_MALFORMED_CERTIFICATE("Malformed certificate"),
     /**
      * Failed to parse this signer's signature record contained in the APK Signature Scheme v2
      * signature.

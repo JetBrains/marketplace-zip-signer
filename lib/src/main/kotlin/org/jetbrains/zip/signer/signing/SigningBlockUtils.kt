@@ -1,6 +1,7 @@
 package org.jetbrains.zip.signer.signing
 
 import com.android.apksig.util.DataSource
+import org.jetbrains.zip.signer.bytes.sliceFromTo
 import org.jetbrains.zip.signer.zip.ZipSections
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -10,6 +11,35 @@ object SigningBlockUtils {
     private const val SIGNATURE_BLOCK_MAGIC_HI = 0x3234206b636f6c42L
     private const val SIGNATURE_BLOCK_MAGIC_LO = 0x20676953204b5041L
     private const val SIGNATURE_BLOCK_MIN_SIZE = 32
+
+    /**
+     * Generate signing block in the following format:
+     * uint64:  size (excluding this field)
+     * repeated ID-value pairs:
+     *   uint64: size (excluding this field)
+     *   uint32: ID
+     *   (size - 4) bytes: value
+     * (extra dummy ID-value for padding to make block size a multiple of 4096 bytes)
+     * uint64:  size (same as the one above)
+     * uint128: magic
+     */
+    fun generateSigningBlock(content: ByteArray): ByteArray {
+        val resultSize = (8 // size
+                + content.size
+                + 8 // size
+                + 16) // magic
+
+        return with(ByteBuffer.allocate(resultSize)) {
+            order(ByteOrder.LITTLE_ENDIAN)
+            val blockSizeFieldValue = resultSize - 8L
+            putLong(blockSizeFieldValue)
+            put(content)
+            putLong(blockSizeFieldValue)
+            putLong(SIGNATURE_BLOCK_MAGIC_LO)
+            putLong(SIGNATURE_BLOCK_MAGIC_HI)
+            array()
+        }
+    }
 
     /**
      * Returns the signing block of the provided zip archive.
@@ -24,7 +54,7 @@ object SigningBlockUtils {
     fun findZipSigningBlock(
         zipArchive: DataSource,
         zipSections: ZipSections
-    ): SigningBlockInfo? {
+    ): SigningBlock? {
         val centralDirStartOffset = zipSections.zipCentralDirectoryOffset
         val centralDirEndOffset = centralDirStartOffset + zipSections.zipCentralDirectorySizeBytes
         if (centralDirEndOffset != zipSections.zipEndOfCentralDirectoryOffset) return null
@@ -55,8 +85,12 @@ object SigningBlockUtils {
             order(ByteOrder.LITTLE_ENDIAN)
         }
 
-        return SigningBlockInfo(signingBlockOffset, signingBlockContent)
+        return SigningBlock(signingBlockOffset, signingBlockContent)
     }
 }
 
-class SigningBlockInfo(val startOffset: Long, val content: ByteBuffer)
+class SigningBlock(val startOffset: Long, val content: ByteBuffer) {
+    fun getData(): ByteBuffer {
+        return content.sliceFromTo(8, content.capacity() - 24)
+    }
+}

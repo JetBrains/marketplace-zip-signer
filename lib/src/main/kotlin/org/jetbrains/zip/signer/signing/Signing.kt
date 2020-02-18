@@ -3,10 +3,13 @@ package org.jetbrains.zip.signer.signing
 import com.android.apksig.internal.apk.ContentDigestAlgorithm
 import com.android.apksig.util.DataSinks
 import com.android.apksig.util.DataSource
+import com.google.protobuf.ByteString
 import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm
+import org.jetbrains.zip.signer.proto.DigestProto
+import org.jetbrains.zip.signer.proto.SignatureProto
+import org.jetbrains.zip.signer.proto.SignedDataProto
+import org.jetbrains.zip.signer.proto.ZipSignerProto
 import java.io.IOException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.security.*
 import java.security.cert.X509Certificate
 import kotlin.collections.set
@@ -137,7 +140,7 @@ fun generateSignerBlock(
     privateKey: PrivateKey,
     signatureAlgorithms: Collection<SignatureAlgorithm>,
     contentDigests: Map<ContentDigestAlgorithm, ByteArray>
-): ByteArray {
+): ZipSignerProto {
     if (certificates.isEmpty()) {
         throw SignatureException("No certificates configured for signer")
     }
@@ -148,23 +151,28 @@ fun generateSignerBlock(
         contentDigests
     )
     val signatures = signatureAlgorithms.map {
-        it.id to generateSignatureOverData(
-            dataToSign,
-            privateKey,
-            publicKey,
-            it
-        )
+        SignatureProto
+            .newBuilder()
+            .setAlgorithmId(it.id)
+            .setSignatureContent(
+                ByteString.copyFrom(
+                    generateSignatureOverData(
+                        dataToSign.toByteArray(),
+                        privateKey,
+                        publicKey,
+                        it
+                    )
+                )
+            )
+            .build()
     }
 
-    return encodeAsSequenceOfLengthPrefixedElements(
-        listOf(
-            dataToSign,
-            encodeAsSequenceOfLengthPrefixedPairsOfIntAndLengthPrefixedBytes(
-                signatures
-            ),
-            publicKey.encoded
-        )
-    )
+    return ZipSignerProto
+        .newBuilder()
+        .setPublicKey(ByteString.copyFrom(publicKey.encoded))
+        .addAllSignatures(signatures)
+        .setSignedData(dataToSign)
+        .build()
 }
 
 /**
@@ -182,53 +190,23 @@ fun getDataToSign(
     certificates: List<X509Certificate>,
     signatureAlgorithms: Collection<SignatureAlgorithm>,
     contentDigests: Map<ContentDigestAlgorithm, ByteArray>
-): ByteArray {
-    val encodedCertificates = certificates.map { it.encoded }
+): SignedDataProto {
+    val encodedCertificates = certificates.map { ByteString.copyFrom(it.encoded) }
     val digests = signatureAlgorithms.map {
         val contentDigestAlgorithm = it.contentDigestAlgorithm
         val contentDigest = contentDigests[contentDigestAlgorithm] ?: throw RuntimeException(
             "$contentDigestAlgorithm content digest for $it not computed"
         )
-        it.id to contentDigest
+        DigestProto
+            .newBuilder()
+            .setAlgorithmId(it.id)
+            .setDigestContent(ByteString.copyFrom(contentDigest))
+            .build()
     }
-    return encodeAsSequenceOfLengthPrefixedElements(
-        listOf(
-            encodeAsSequenceOfLengthPrefixedPairsOfIntAndLengthPrefixedBytes(
-                digests
-            ),
-            encodeAsSequenceOfLengthPrefixedElements(
-                encodedCertificates
-            ),
-            ByteArray(0),
-            ByteArray(0)
-        )
-    )
-}
-
-fun encodeAsSequenceOfLengthPrefixedPairsOfIntAndLengthPrefixedBytes(
-    sequence: List<Pair<Int, ByteArray>>
-): ByteArray {
-    val resultSize = sequence.sumBy { 12 + it.second.size }
-    val result = ByteBuffer.allocate(resultSize)
-    result.order(ByteOrder.LITTLE_ENDIAN)
-    sequence.forEach { (first, second) ->
-        result.putInt(8 + second.size)
-        result.putInt(first)
-        result.putInt(second.size)
-        result.put(second)
-    }
-    return result.array()
-}
-
-fun encodeAsSequenceOfLengthPrefixedElements(sequence: List<ByteArray>): ByteArray {
-    val payloadSize = sequence.sumBy { 4 + it.size }
-    val result = ByteBuffer.allocate(payloadSize)
-    result.order(ByteOrder.LITTLE_ENDIAN)
-    sequence.forEach { element ->
-        result.putInt(element.size)
-        result.put(element)
-    }
-    return result.array()
+    return SignedDataProto.newBuilder()
+        .addAllDigests(digests)
+        .addAllCertificates(encodedCertificates)
+        .build()
 }
 
 fun generateSignatureOverData(
@@ -289,42 +267,3 @@ fun generateSignatureOverData(
     return signatureBytes
 }
 
-/**
- * Generate signing block in the following format:
- * uint64:  size (excluding this field)
- * repeated ID-value pairs:
- *   uint64: size (excluding this field)
- *   uint32: ID
- *   (size - 4) bytes: value
- * (extra dummy ID-value for padding to make block size a multiple of 4096 bytes)
- * uint64:  size (same as the one above)
- * uint128: magic
- */
-fun generateSigningBlock(signatureSchemeBlockPairs: List<Pair<ByteArray, Int>>): ByteArray {
-    val apkSigningBlockMagic = byteArrayOf(
-        0x41, 0x50, 0x4b, 0x20, 0x53, 0x69, 0x67, 0x20,
-        0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x20, 0x34, 0x32
-    )
-
-    val blocksSize = signatureSchemeBlockPairs.sumBy {
-        8 + 4 + it.first.size // size + id + value
-    }
-    val resultSize = (8 // size
-            + blocksSize
-            + 8 // size
-            + 16) // magic
-
-    return with(ByteBuffer.allocate(resultSize)) {
-        order(ByteOrder.LITTLE_ENDIAN)
-        val blockSizeFieldValue = resultSize - 8L
-        putLong(blockSizeFieldValue)
-        signatureSchemeBlockPairs.forEach { (signatureSchemeBlock, signatureSchemeId) ->
-            putLong(4L + signatureSchemeBlock.size)
-            putInt(signatureSchemeId)
-            put(signatureSchemeBlock)
-        }
-        putLong(blockSizeFieldValue)
-        put(apkSigningBlockMagic)
-        array()
-    }
-}

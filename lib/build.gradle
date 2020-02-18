@@ -1,6 +1,28 @@
+plugins {
+    id "com.google.protobuf" version "0.8.11"
+    id "idea"
+}
+
 dependencies {
     implementation "org.bouncycastle:bcpkix-jdk15on:1.64"
+    implementation "com.google.protobuf:protobuf-java:3.11.4"
     implementation "org.slf4j:slf4j-api:1.7.30"
 
     testImplementation ('junit:junit:4.12')
+}
+
+idea {
+    module {
+        sourceDirs += file("${projectDir}/src/generated/main/java")
+    }
+}
+
+protobuf {
+    generatedFilesBaseDir = "$projectDir/src/generated"
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.11.4'
+    }
+    generateProtoTasks {
+        ofSourceSet('main')*.plugins {}
+    }
 }
