@@ -1,6 +1,6 @@
 package org.jetbrains.zip.signer.verifier
 
-import com.android.apksig.internal.apk.ContentDigestAlgorithm
+import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 
 enum class Issue(
     /**

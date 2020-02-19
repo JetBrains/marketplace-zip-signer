@@ -4,19 +4,19 @@ import com.google.protobuf.ByteString
 import org.jetbrains.zip.signer.proto.DigestProto
 
 class Digest private constructor(
-    val algorithmId: Int, val digestBytes: ByteArray, val protobufRepresentation: DigestProto
+    val algorithm: ContentDigestAlgorithm, val digestBytes: ByteArray, val protobufRepresentation: DigestProto
 ) {
     constructor(protobufRepresentation: DigestProto) : this(
-        protobufRepresentation.algorithmId,
+        ContentDigestAlgorithm.fromProtobufEnum(protobufRepresentation.algorithmId),
         protobufRepresentation.digestBytes.toByteArray(),
         protobufRepresentation
     )
 
-    constructor(algorithmId: Int, digestBytes: ByteArray) : this(
-        algorithmId,
+    constructor(algorithm: ContentDigestAlgorithm, digestBytes: ByteArray) : this(
+        algorithm,
         digestBytes,
         DigestProto.newBuilder()
-            .setAlgorithmId(algorithmId)
+            .setAlgorithmId(algorithm.toProtobufEnum())
             .setDigestBytes(ByteString.copyFrom(digestBytes))
             .build()
     )

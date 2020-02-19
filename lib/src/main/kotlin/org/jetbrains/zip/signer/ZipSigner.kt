@@ -5,7 +5,6 @@ import com.android.apksig.util.DataSink
 import com.android.apksig.util.DataSinks
 import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
-import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
 import org.jetbrains.zip.signer.metadata.ZipMetadata
 import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.signing.generateSignerBlock
@@ -40,7 +39,7 @@ object ZipSigner {
         val inputZipSections = org.jetbrains.zip.signer.zip.ZipUtils.findZipSections(inputDataSource)
         val inputSigningBlock = ZipMetadata.findInZip(inputDataSource, inputZipSections)
 
-        val algorithms = getSuggestedSignatureAlgorithms(signerInfo.certificates.first().publicKey)
+        val algorithms = signerInfo.suggestedSignatureAlgorithms
 
         val contentDigests = computeContentDigests(
             algorithms.map { it.contentDigestAlgorithm },

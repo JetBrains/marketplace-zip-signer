@@ -1,13 +1,8 @@
 package org.jetbrains.zip.signer.signing
 
-import com.android.apksig.internal.apk.ContentDigestAlgorithm
 import com.android.apksig.util.DataSinks
 import com.android.apksig.util.DataSource
-import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm
-import org.jetbrains.zip.signer.metadata.DataToSign
-import org.jetbrains.zip.signer.metadata.Digest
-import org.jetbrains.zip.signer.metadata.SignatureData
-import org.jetbrains.zip.signer.metadata.SignerBlock
+import org.jetbrains.zip.signer.metadata.*
 import java.io.IOException
 import java.security.*
 import java.security.cert.X509Certificate
@@ -146,12 +141,13 @@ fun generateSignerBlock(
     val publicKey = certificates[0].publicKey
     val dataToSign = getDataToSign(
         certificates,
-        signatureAlgorithms,
+        signatureAlgorithms.map { it.contentDigestAlgorithm },
         contentDigests
     )
     val signatures = signatureAlgorithms.map {
         SignatureData(
-            it.id, generateSignatureOverData(
+            it,
+            generateSignatureOverData(
                 dataToSign.toByteArray(),
                 privateKey,
                 publicKey,
@@ -180,16 +176,15 @@ fun generateSignerBlock(
  */
 fun getDataToSign(
     certificates: List<X509Certificate>,
-    signatureAlgorithms: Collection<SignatureAlgorithm>,
+    contentDigestAlgorithms: Collection<ContentDigestAlgorithm>,
     contentDigests: Map<ContentDigestAlgorithm, ByteArray>
 ): DataToSign {
     val encodedCertificates = certificates.map { it.encoded }
-    val digests = signatureAlgorithms.map {
-        val contentDigestAlgorithm = it.contentDigestAlgorithm
+    val digests = contentDigestAlgorithms.map { contentDigestAlgorithm ->
         val contentDigest = contentDigests[contentDigestAlgorithm] ?: throw RuntimeException(
-            "$contentDigestAlgorithm content digest for $it not computed"
+            "$contentDigestAlgorithm content digest not computed"
         )
-        Digest(it.id, contentDigest)
+        Digest(contentDigestAlgorithm, contentDigest)
     }
     return DataToSign(
         digests,
@@ -203,13 +198,10 @@ fun generateSignatureOverData(
     publicKey: PublicKey,
     algorithm: SignatureAlgorithm
 ): ByteArray {
-    val (jcaSignatureAlgorithm, jcaSignatureAlgorithmParams) = algorithm.jcaSignatureAlgorithmAndParams
+    val jcaSignatureAlgorithm = algorithm.jcaSignatureAlgorithm
     val signatureBytes = try {
         with(Signature.getInstance(jcaSignatureAlgorithm)) {
             initSign(privateKey)
-            if (jcaSignatureAlgorithmParams != null) {
-                setParameter(jcaSignatureAlgorithmParams)
-            }
             update(data)
             sign()
         }
@@ -224,9 +216,6 @@ fun generateSignatureOverData(
     try {
         with(Signature.getInstance(jcaSignatureAlgorithm)) {
             initVerify(publicKey)
-            if (jcaSignatureAlgorithmParams != null) {
-                setParameter(jcaSignatureAlgorithmParams)
-            }
             update(data)
             if (!verify(signatureBytes)) {
                 throw SignatureException(

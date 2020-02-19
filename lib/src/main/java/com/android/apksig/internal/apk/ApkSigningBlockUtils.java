@@ -17,7 +17,10 @@
 package com.android.apksig.internal.apk;
 
 
-import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm;
+import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm;
+import org.jetbrains.zip.signer.metadata.Digest;
+import org.jetbrains.zip.signer.metadata.SignatureAlgorithm;
+import org.jetbrains.zip.signer.metadata.SignatureData;
 import org.jetbrains.zip.signer.verifier.Issue;
 import org.jetbrains.zip.signer.verifier.IssueWithParams;
 
@@ -28,10 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 public class ApkSigningBlockUtils {
-
     private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
-    public static final int ANDROID_COMMON_PAGE_ALIGNMENT_BYTES = 4096;
-
 
     public static String toHex(byte[] value) {
         StringBuilder sb = new StringBuilder(value.length * 2);
@@ -44,16 +44,6 @@ public class ApkSigningBlockUtils {
         return sb.toString();
     }
 
-
-    public static class SupportedSignature {
-        public final SignatureAlgorithm algorithm;
-        public final byte[] signature;
-
-        public SupportedSignature(SignatureAlgorithm algorithm, byte[] signature) {
-            this.algorithm = algorithm;
-            this.signature = signature;
-        }
-    }
 
     public static class Result {
         public final int signatureSchemeVersion;
@@ -104,9 +94,9 @@ public class ApkSigningBlockUtils {
         public static class SignerInfo {
             public int index;
             public List<X509Certificate> certs = new ArrayList<>();
-            public List<ContentDigest> contentDigests = new ArrayList<>();
+            public List<Digest> contentDigests = new ArrayList<>();
             public Map<ContentDigestAlgorithm, byte[]> verifiedContentDigests = new HashMap<>();
-            public List<Signature> signatures = new ArrayList<>();
+            public List<SignatureData> signatures = new ArrayList<>();
             public Map<SignatureAlgorithm, byte[]> verifiedSignatures = new HashMap<>();
 
             private final List<IssueWithParams> mWarnings = new ArrayList<>();
@@ -130,42 +120,6 @@ public class ApkSigningBlockUtils {
 
             public List<IssueWithParams> getWarnings() {
                 return mWarnings;
-            }
-
-            public static class ContentDigest {
-                private final int mSignatureAlgorithmId;
-                private final byte[] mValue;
-
-                public ContentDigest(int signatureAlgorithmId, byte[] value) {
-                    mSignatureAlgorithmId = signatureAlgorithmId;
-                    mValue = value;
-                }
-
-                public int getSignatureAlgorithmId() {
-                    return mSignatureAlgorithmId;
-                }
-
-                public byte[] getValue() {
-                    return mValue;
-                }
-            }
-
-            public static class Signature {
-                private final int mAlgorithmId;
-                private final byte[] mValue;
-
-                public Signature(int algorithmId, byte[] value) {
-                    mAlgorithmId = algorithmId;
-                    mValue = value;
-                }
-
-                public int getAlgorithmId() {
-                    return mAlgorithmId;
-                }
-
-                public byte[] getValue() {
-                    return mValue;
-                }
             }
 
             public static class AdditionalAttribute {

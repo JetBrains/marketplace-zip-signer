@@ -2,15 +2,13 @@ package org.jetbrains.zip.signer.verifier
 
 
 import com.android.apksig.internal.apk.ApkSigningBlockUtils
-import com.android.apksig.internal.apk.ApkSigningBlockUtils.SupportedSignature
 import com.android.apksig.internal.apk.ApkSigningBlockUtils.toHex
-import com.android.apksig.internal.apk.ContentDigestAlgorithm
 import com.android.apksig.internal.util.ByteBufferDataSource
 import com.android.apksig.internal.zip.ZipUtils
 import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
-import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm.Companion.findById
 import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
+import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 import org.jetbrains.zip.signer.metadata.SignerBlock
 import org.jetbrains.zip.signer.metadata.ZipMetadata
 import org.jetbrains.zip.signer.signing.computeContentDigests
@@ -100,30 +98,16 @@ object ZipVerifier {
 
         val publicKeyBytes = signer.encodedPublicKey
 
-        val supportedSignatures: MutableList<SupportedSignature> =
-            ArrayList(1)
-        signer.signatures.forEach { signature ->
-            result.signatures.add(
-                ApkSigningBlockUtils.Result.SignerInfo.Signature(
-                    signature.algorithmId, signature.signatureBytes
-                )
-            )
-            val signatureAlgorithm = findById(signature.algorithmId)
-                ?: throw IllegalArgumentException("Invalid signature algorithm id ${signature.algorithmId}")
-            supportedSignatures.add(
-                SupportedSignature(signatureAlgorithm, signature.signatureBytes)
-            )
-        }
+        result.signatures.addAll(signer.signatures)
         if (result.signatures.isEmpty()) {
             result.addError(Issue.V2_SIG_NO_SIGNATURES)
             return result
         }
 
-        supportedSignatures.forEach { signature ->
+        signer.signatures.forEach { signature ->
             val signatureAlgorithm = signature.algorithm
-            val jcaSignatureAlgorithm = signatureAlgorithm.jcaSignatureAlgorithmAndParams.first
-            val jcaSignatureAlgorithmParams =
-                signatureAlgorithm.jcaSignatureAlgorithmAndParams.second
+            val jcaSignatureAlgorithm = signatureAlgorithm.jcaSignatureAlgorithm
+
             val keyAlgorithm = signatureAlgorithm.jcaKeyAlgorithm
             val publicKey = try {
                 KeyFactory.getInstance(keyAlgorithm).generatePublic(
@@ -136,11 +120,8 @@ object ZipVerifier {
             try {
                 val sig = Signature.getInstance(jcaSignatureAlgorithm)
                 sig.initVerify(publicKey)
-                if (jcaSignatureAlgorithmParams != null) {
-                    sig.setParameter(jcaSignatureAlgorithmParams)
-                }
                 sig.update(signedData.toByteArray())
-                val sigBytes = signature.signature
+                val sigBytes = signature.signatureBytes
                 if (!sig.verify(sigBytes)) {
                     result.addError(Issue.V2_SIG_DID_NOT_VERIFY, signatureAlgorithm)
                     return result
@@ -178,28 +159,14 @@ object ZipVerifier {
             return result
         }
 
-        signer.dataToSign.digests.forEach {
-            result.contentDigests.add(
-                ApkSigningBlockUtils.Result.SignerInfo.ContentDigest(
-                    it.algorithmId, it.digestBytes
-                )
-            )
-        }
-        val sigAlgsFromSignaturesRecord: MutableList<Int> =
-            ArrayList(result.signatures.size)
-        for (signature in result.signatures) {
-            sigAlgsFromSignaturesRecord.add(signature.algorithmId)
-        }
-        val sigAlgsFromDigestsRecord: MutableList<Int> =
-            ArrayList(result.contentDigests.size)
-        for (digest in result.contentDigests) {
-            sigAlgsFromDigestsRecord.add(digest.signatureAlgorithmId)
-        }
-        if (sigAlgsFromSignaturesRecord != sigAlgsFromDigestsRecord) {
+        result.contentDigests.addAll(signer.dataToSign.digests)
+        val digestAlgorithmsFromSignaturesRecord = result.signatures.map { it.algorithm.contentDigestAlgorithm }
+        val digestAlgorithmsFromDigestsRecord = result.contentDigests.map { it.algorithm }
+        if (digestAlgorithmsFromSignaturesRecord != digestAlgorithmsFromDigestsRecord) {
             result.addError(
                 Issue.V2_SIG_SIG_ALG_MISMATCH_BETWEEN_SIGNATURES_AND_DIGESTS_RECORDS,
-                sigAlgsFromSignaturesRecord,
-                sigAlgsFromDigestsRecord
+                digestAlgorithmsFromSignaturesRecord,
+                digestAlgorithmsFromDigestsRecord
             )
             return result
         }
@@ -254,16 +221,14 @@ object ZipVerifier {
 // in signer blocks.
         for (signerInfo in signers) {
             for (expected in signerInfo.contentDigests) {
-                val signatureAlgorithm =
-                    findById(expected.signatureAlgorithmId) ?: continue
-                val contentDigestAlgorithm = signatureAlgorithm.contentDigestAlgorithm
+                val contentDigestAlgorithm = expected.algorithm
                 // if the current digest algorithm is not in the list provided by the caller then
 // ignore it; the signer may contain digests not recognized by the specified SDK
 // range.
                 if (!contentDigestAlgorithms.contains(contentDigestAlgorithm)) {
                     continue
                 }
-                val expectedDigest = expected.value
+                val expectedDigest = expected.digestBytes
                 val actualDigest = actualContentDigests[contentDigestAlgorithm]
                 if (!Arrays.equals(expectedDigest, actualDigest)) {
                     throw Exception(

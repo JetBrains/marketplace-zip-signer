@@ -25,11 +25,20 @@ message DataToSignProto {
 }
 
 message DigestProto {
-    uint32 algorithmId = 1;
+    AlgorithmId algorithmId = 1;
+    enum AlgorithmId {
+        SHA256 = 0;
+        SHA512 = 1;
+    }
     bytes digestBytes = 2;
 }
 
 message SignatureDataProto {
-    uint32 algorithmId = 1;
+    AlgorithmId algorithmId = 1;
+    enum AlgorithmId {
+        RSA_WITH_SHA256 = 0;
+        RSA_WITH_SHA512 = 2;
+        DSA_WITH_SHA256 = 3;
+    }
     bytes signatureBytes = 2;
 }

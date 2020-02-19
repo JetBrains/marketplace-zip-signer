@@ -4,19 +4,19 @@ import com.google.protobuf.ByteString
 import org.jetbrains.zip.signer.proto.SignatureDataProto
 
 class SignatureData private constructor(
-    val algorithmId: Int, val signatureBytes: ByteArray, val protobufRepresentation: SignatureDataProto
+    val algorithm: SignatureAlgorithm, val signatureBytes: ByteArray, val protobufRepresentation: SignatureDataProto
 ) {
     constructor(protobufRepresentation: SignatureDataProto) : this(
-        protobufRepresentation.algorithmId,
+        SignatureAlgorithm.fromProtobufEnum(protobufRepresentation.algorithmId),
         protobufRepresentation.signatureBytes.toByteArray(),
         protobufRepresentation
     )
 
-    constructor(algorithmId: Int, signatureBytes: ByteArray) : this(
-        algorithmId,
+    constructor(algorithm: SignatureAlgorithm, signatureBytes: ByteArray) : this(
+        algorithm,
         signatureBytes,
         SignatureDataProto.newBuilder()
-            .setAlgorithmId(algorithmId)
+            .setAlgorithmId(algorithm.toProtobufEnum())
             .setSignatureBytes(ByteString.copyFrom(signatureBytes))
             .build()
     )
