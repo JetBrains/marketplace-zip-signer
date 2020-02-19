@@ -11,7 +11,7 @@ import org.jetbrains.zip.signer.exceptions.PluginFormatException
 import org.jetbrains.zip.signer.exceptions.ZipFormatException
 import org.jetbrains.zip.signer.proto.ZipSignatureSchemeContentProto
 import org.jetbrains.zip.signer.proto.ZipSignatureSchemeProto
-import org.jetbrains.zip.signer.signing.SigningBlockUtils
+import org.jetbrains.zip.signer.signing.SigningBlock
 import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.signing.generateSignerBlock
 import org.jetbrains.zip.signer.zip.ZipSections
@@ -45,7 +45,7 @@ object ZipSigner {
         signerInfo: SignerInfo
     ) {
         val inputZipSections = org.jetbrains.zip.signer.zip.ZipUtils.findZipSections(inputDataSource)
-        val inputSigningBlock = SigningBlockUtils.findZipSigningBlock(inputDataSource, inputZipSections)
+        val inputSigningBlock = SigningBlock.findInZip(inputDataSource, inputZipSections)
 
         val algorithms = getSuggestedSignatureAlgorithms(signerInfo.certificates.first().publicKey)
 
@@ -76,9 +76,7 @@ object ZipSigner {
                     .addAllSignatures(signerBlocks)
             )
             .build()
-        val signingBlock = SigningBlockUtils.generateSigningBlock(
-            signatureScheme.toByteArray()
-        )
+        val signingBlock = SigningBlock(signatureScheme)
 
         val eocdOffset = inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes
         val outputEocdRecord = inputDataSource.getByteBuffer(
@@ -94,7 +92,7 @@ object ZipSigner {
         )
 
         outputDataSink.consume(inputDataSource.getByteBuffer(0, inputZipSections.zipCentralDirectoryOffset.toInt()))
-        outputDataSink.consume(ByteBuffer.wrap(signingBlock))
+        outputDataSink.consume(ByteBuffer.wrap(signingBlock.toByteArray()))
         outputDataSink.consume(
             inputDataSource.getByteBuffer(
                 inputZipSections.zipCentralDirectoryOffset, inputZipSections.zipCentralDirectorySizeBytes.toInt()

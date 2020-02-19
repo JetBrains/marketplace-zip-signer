@@ -11,9 +11,8 @@ import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
 import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm.Companion.findById
 import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
-import org.jetbrains.zip.signer.proto.ZipSignatureSchemeProto
 import org.jetbrains.zip.signer.proto.ZipSignerProto
-import org.jetbrains.zip.signer.signing.SigningBlockUtils
+import org.jetbrains.zip.signer.signing.SigningBlock
 import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSections
 import java.io.File
@@ -43,16 +42,17 @@ object ZipVerifier {
 
     private fun verify(dataSource: DataSource): List<ApkSigningBlockUtils.Result.SignerInfo> {
         val zipSections = findZipSections(dataSource)
-        val signingBlock = SigningBlockUtils.findZipSigningBlock(dataSource, zipSections)
-            ?: throw SigningBlockNotFoundException("Failed to get signature from zip archive")
-        val beforeApkSigningBlock = dataSource.slice(0, signingBlock.startOffset)
+        val signingBlock = SigningBlock.findInZip(dataSource, zipSections)
+            ?: throw SigningBlockNotFoundException("Zip archive contains no valid signing block")
+        val signingBlockStart = zipSections.zipCentralDirectoryOffset - signingBlock.size
+        val beforeApkSigningBlock = dataSource.slice(0, signingBlockStart)
         val centralDir = dataSource.slice(
             zipSections.zipCentralDirectoryOffset,
             zipSections.zipEndOfCentralDirectoryOffset - zipSections.zipCentralDirectoryOffset
         )
         return verify(
             beforeApkSigningBlock,
-            signingBlock.getData(),
+            signingBlock,
             centralDir,
             zipSections.zipEndOfCentralDirectory
         )
@@ -60,13 +60,13 @@ object ZipVerifier {
 
     private fun verify(
         beforeApkSigningBlock: DataSource,
-        signatureSchemeData: ByteBuffer,
+        signingBlock: SigningBlock,
         centralDir: DataSource,
         eocd: ByteBuffer
     ): List<ApkSigningBlockUtils.Result.SignerInfo> {
         val contentDigestsToVerify = HashSet<ContentDigestAlgorithm>(1)
         val signers = parseSigners(
-            signatureSchemeData,
+            signingBlock,
             contentDigestsToVerify
         )
         verifyIntegrity(
@@ -76,18 +76,16 @@ object ZipVerifier {
     }
 
     private fun parseSigners(
-        signatureSchemeData: ByteBuffer,
+        signingBlock: SigningBlock,
         contentDigestsToVerify: MutableSet<ContentDigestAlgorithm>
     ): List<ApkSigningBlockUtils.Result.SignerInfo> {
-        val signatureScheme = ZipSignatureSchemeProto.parseFrom(signatureSchemeData)
-
         val certFactory: CertificateFactory
         certFactory = try {
             CertificateFactory.getInstance("X.509")
         } catch (e: CertificateException) {
             throw RuntimeException("Failed to obtain X.509 CertificateFactory", e)
         }
-        return signatureScheme.content.signaturesList.map {
+        return signingBlock.content.content.signaturesList.map {
             parseSigner(it, certFactory, contentDigestsToVerify)
         }
     }
