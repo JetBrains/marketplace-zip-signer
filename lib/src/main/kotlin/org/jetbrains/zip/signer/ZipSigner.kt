@@ -9,7 +9,7 @@ import com.android.apksig.util.DataSources
 import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
 import org.jetbrains.zip.signer.exceptions.PluginFormatException
 import org.jetbrains.zip.signer.exceptions.ZipFormatException
-import org.jetbrains.zip.signer.signing.ZipMetadata
+import org.jetbrains.zip.signer.metadata.ZipMetadata
 import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.signing.generateSignerBlock
 import org.jetbrains.zip.signer.zip.ZipSections

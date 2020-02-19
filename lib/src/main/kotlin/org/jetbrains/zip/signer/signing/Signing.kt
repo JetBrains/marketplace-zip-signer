@@ -4,6 +4,10 @@ import com.android.apksig.internal.apk.ContentDigestAlgorithm
 import com.android.apksig.util.DataSinks
 import com.android.apksig.util.DataSource
 import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm
+import org.jetbrains.zip.signer.metadata.DataToSign
+import org.jetbrains.zip.signer.metadata.Digest
+import org.jetbrains.zip.signer.metadata.SignatureData
+import org.jetbrains.zip.signer.metadata.SignerBlock
 import java.io.IOException
 import java.security.*
 import java.security.cert.X509Certificate

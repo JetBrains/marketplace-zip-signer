@@ -11,8 +11,8 @@ import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
 import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm.Companion.findById
 import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
-import org.jetbrains.zip.signer.signing.SignerBlock
-import org.jetbrains.zip.signer.signing.ZipMetadata
+import org.jetbrains.zip.signer.metadata.SignerBlock
+import org.jetbrains.zip.signer.metadata.ZipMetadata
 import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSections
 import java.io.File
