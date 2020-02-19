@@ -4,32 +4,32 @@ option java_package = "org.jetbrains.zip.signer.proto";
 option java_outer_classname = "ZipMetadataProtos";
 option java_multiple_files = true;
 
-message ZipSignatureSchemeProto {
+message ZipMetadataProto {
     uint32 signatureSchemeVersion = 1;
-    ZipSignatureSchemeContentProto content = 2;
+    ZipSignatureBlockProto content = 2;
 }
 
-message ZipSignatureSchemeContentProto {
-    repeated ZipSignerProto signatures = 1;
+message ZipSignatureBlockProto {
+    repeated SignerBlockProto signers = 1;
 }
 
-message ZipSignerProto {
-    SignedDataProto signedData = 1;
-    repeated SignatureProto signatures = 2;
+message SignerBlockProto {
+    DataToSignProto dataToSign = 1;
+    repeated SignatureDataProto signatures = 2;
     bytes publicKey = 3;
 }
 
-message SignedDataProto {
+message DataToSignProto {
     repeated DigestProto digests = 1;
     repeated bytes certificates = 2;
 }
 
-message SignatureProto {
-    uint32 algorithmId = 1;
-    bytes signatureContent = 2;
-}
-
 message DigestProto {
     uint32 algorithmId = 1;
-    bytes digestContent = 2;
+    bytes digestBytes = 2;
+}
+
+message SignatureDataProto {
+    uint32 algorithmId = 1;
+    bytes signatureBytes = 2;
 }

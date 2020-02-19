@@ -9,9 +9,7 @@ import com.android.apksig.util.DataSources
 import org.jetbrains.zip.signer.algorithm.getSuggestedSignatureAlgorithms
 import org.jetbrains.zip.signer.exceptions.PluginFormatException
 import org.jetbrains.zip.signer.exceptions.ZipFormatException
-import org.jetbrains.zip.signer.proto.ZipSignatureSchemeContentProto
-import org.jetbrains.zip.signer.proto.ZipSignatureSchemeProto
-import org.jetbrains.zip.signer.signing.SigningBlock
+import org.jetbrains.zip.signer.signing.ZipMetadata
 import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.signing.generateSignerBlock
 import org.jetbrains.zip.signer.zip.ZipSections
@@ -45,7 +43,7 @@ object ZipSigner {
         signerInfo: SignerInfo
     ) {
         val inputZipSections = org.jetbrains.zip.signer.zip.ZipUtils.findZipSections(inputDataSource)
-        val inputSigningBlock = SigningBlock.findInZip(inputDataSource, inputZipSections)
+        val inputSigningBlock = ZipMetadata.findInZip(inputDataSource, inputZipSections)
 
         val algorithms = getSuggestedSignatureAlgorithms(signerInfo.certificates.first().publicKey)
 
@@ -67,16 +65,7 @@ object ZipSigner {
             )
         )
 
-        val signatureScheme = ZipSignatureSchemeProto
-            .newBuilder()
-            .setSignatureSchemeVersion(1)
-            .setContent(
-                ZipSignatureSchemeContentProto
-                    .newBuilder()
-                    .addAllSignatures(signerBlocks)
-            )
-            .build()
-        val signingBlock = SigningBlock(signatureScheme)
+        val signingBlock = ZipMetadata.fromSignerBlocks(signerBlocks)
 
         val eocdOffset = inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes
         val outputEocdRecord = inputDataSource.getByteBuffer(

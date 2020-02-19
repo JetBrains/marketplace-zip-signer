@@ -3,12 +3,7 @@ package org.jetbrains.zip.signer.signing
 import com.android.apksig.internal.apk.ContentDigestAlgorithm
 import com.android.apksig.util.DataSinks
 import com.android.apksig.util.DataSource
-import com.google.protobuf.ByteString
 import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm
-import org.jetbrains.zip.signer.proto.DigestProto
-import org.jetbrains.zip.signer.proto.SignatureProto
-import org.jetbrains.zip.signer.proto.SignedDataProto
-import org.jetbrains.zip.signer.proto.ZipSignerProto
 import java.io.IOException
 import java.security.*
 import java.security.cert.X509Certificate
@@ -27,7 +22,7 @@ fun computeContentDigests(
         }
         return computeChunkContentDigests(
             oneMbChunkBasedAlgorithm, listOf(beforeCentralDir, centralDir, eocd)
-        ).toMutableMap()
+        )
     } catch (e: IOException) {
         throw IOException("Failed to read APK being signed", e)
     } catch (e: DigestException) {
@@ -140,7 +135,7 @@ fun generateSignerBlock(
     privateKey: PrivateKey,
     signatureAlgorithms: Collection<SignatureAlgorithm>,
     contentDigests: Map<ContentDigestAlgorithm, ByteArray>
-): ZipSignerProto {
+): SignerBlock {
     if (certificates.isEmpty()) {
         throw SignatureException("No certificates configured for signer")
     }
@@ -151,28 +146,21 @@ fun generateSignerBlock(
         contentDigests
     )
     val signatures = signatureAlgorithms.map {
-        SignatureProto
-            .newBuilder()
-            .setAlgorithmId(it.id)
-            .setSignatureContent(
-                ByteString.copyFrom(
-                    generateSignatureOverData(
-                        dataToSign.toByteArray(),
-                        privateKey,
-                        publicKey,
-                        it
-                    )
-                )
+        SignatureData(
+            it.id, generateSignatureOverData(
+                dataToSign.toByteArray(),
+                privateKey,
+                publicKey,
+                it
             )
-            .build()
+        )
     }
 
-    return ZipSignerProto
-        .newBuilder()
-        .setPublicKey(ByteString.copyFrom(publicKey.encoded))
-        .addAllSignatures(signatures)
-        .setSignedData(dataToSign)
-        .build()
+    return SignerBlock(
+        dataToSign,
+        signatures,
+        publicKey.encoded
+    )
 }
 
 /**
@@ -190,23 +178,19 @@ fun getDataToSign(
     certificates: List<X509Certificate>,
     signatureAlgorithms: Collection<SignatureAlgorithm>,
     contentDigests: Map<ContentDigestAlgorithm, ByteArray>
-): SignedDataProto {
-    val encodedCertificates = certificates.map { ByteString.copyFrom(it.encoded) }
+): DataToSign {
+    val encodedCertificates = certificates.map { it.encoded }
     val digests = signatureAlgorithms.map {
         val contentDigestAlgorithm = it.contentDigestAlgorithm
         val contentDigest = contentDigests[contentDigestAlgorithm] ?: throw RuntimeException(
             "$contentDigestAlgorithm content digest for $it not computed"
         )
-        DigestProto
-            .newBuilder()
-            .setAlgorithmId(it.id)
-            .setDigestContent(ByteString.copyFrom(contentDigest))
-            .build()
+        Digest(it.id, contentDigest)
     }
-    return SignedDataProto.newBuilder()
-        .addAllDigests(digests)
-        .addAllCertificates(encodedCertificates)
-        .build()
+    return DataToSign(
+        digests,
+        encodedCertificates
+    )
 }
 
 fun generateSignatureOverData(
