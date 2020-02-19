@@ -36,12 +36,6 @@ public abstract class ZipUtils {
     private ZipUtils() {
     }
 
-    public static final short COMPRESSION_METHOD_STORED = 0;
-    public static final short COMPRESSION_METHOD_DEFLATED = 8;
-
-    public static final short GP_FLAG_DATA_DESCRIPTOR_USED = 0x08;
-    public static final short GP_FLAG_EFS = 0x0800;
-
     private static final int ZIP_EOCD_REC_MIN_SIZE = 22;
     private static final int ZIP_EOCD_REC_SIG = 0x06054b50;
     private static final int ZIP_EOCD_CENTRAL_DIR_TOTAL_RECORD_COUNT_OFFSET = 10;

@@ -21,9 +21,6 @@ import org.jetbrains.zip.signer.algorithm.SignatureAlgorithm;
 import org.jetbrains.zip.signer.verifier.Issue;
 import org.jetbrains.zip.signer.verifier.IssueWithParams;
 
-import java.nio.BufferUnderflowException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,118 +33,6 @@ public class ApkSigningBlockUtils {
     public static final int ANDROID_COMMON_PAGE_ALIGNMENT_BYTES = 4096;
 
 
-    public static ByteBuffer findApkSignatureSchemeBlock(
-            ByteBuffer apkSigningBlock,
-            int blockId) throws SignatureNotFoundException {
-        checkByteOrderLittleEndian(apkSigningBlock);
-        // FORMAT:
-        // OFFSET       DATA TYPE  DESCRIPTION
-        // * @+0  bytes uint64:    size in bytes (excluding this field)
-        // * @+8  bytes pairs
-        // * @-24 bytes uint64:    size in bytes (same as the one above)
-        // * @-16 bytes uint128:   magic
-        ByteBuffer pairs = sliceFromTo(apkSigningBlock, 8, apkSigningBlock.capacity() - 24);
-
-        int entryCount = 0;
-        while (pairs.hasRemaining()) {
-            entryCount++;
-            if (pairs.remaining() < 8) {
-                throw new SignatureNotFoundException(
-                        "Insufficient data to read size of APK Signing Block entry #" + entryCount);
-            }
-            long lenLong = pairs.getLong();
-            if ((lenLong < 4) || (lenLong > Integer.MAX_VALUE)) {
-                throw new SignatureNotFoundException(
-                        "APK Signing Block entry #" + entryCount
-                                + " size out of range: " + lenLong);
-            }
-            int len = (int) lenLong;
-            int nextEntryPos = pairs.position() + len;
-            if (len > pairs.remaining()) {
-                throw new SignatureNotFoundException(
-                        "APK Signing Block entry #" + entryCount + " size out of range: " + len
-                                + ", available: " + pairs.remaining());
-            }
-            int id = pairs.getInt();
-            if (id == blockId) {
-                return getByteBuffer(pairs, len - 4);
-            }
-            pairs.position(nextEntryPos);
-        }
-
-        throw new SignatureNotFoundException(
-                "No APK Signature Scheme block in APK Signing Block with ID: " + blockId);
-    }
-
-    public static void checkByteOrderLittleEndian(ByteBuffer buffer) {
-        if (buffer.order() != ByteOrder.LITTLE_ENDIAN) {
-            throw new IllegalArgumentException("ByteBuffer byte order must be little endian");
-        }
-    }
-
-    /**
-     * Returns new byte buffer whose content is a shared subsequence of this buffer's content
-     * between the specified start (inclusive) and end (exclusive) positions. As opposed to
-     * {@link ByteBuffer#slice()}, the returned buffer's byte order is the same as the source
-     * buffer's byte order.
-     */
-    private static ByteBuffer sliceFromTo(ByteBuffer source, int start, int end) {
-        if (start < 0) {
-            throw new IllegalArgumentException("start: " + start);
-        }
-        if (end < start) {
-            throw new IllegalArgumentException("end < start: " + end + " < " + start);
-        }
-        int capacity = source.capacity();
-        if (end > source.capacity()) {
-            throw new IllegalArgumentException("end > capacity: " + end + " > " + capacity);
-        }
-        int originalLimit = source.limit();
-        int originalPosition = source.position();
-        try {
-            source.position(0);
-            source.limit(end);
-            source.position(start);
-            ByteBuffer result = source.slice();
-            result.order(source.order());
-            return result;
-        } finally {
-            source.position(0);
-            source.limit(originalLimit);
-            source.position(originalPosition);
-        }
-    }
-
-    /**
-     * Relative <em>get</em> method for reading {@code size} number of bytes from the current
-     * position of this buffer.
-     *
-     * <p>This method reads the next {@code size} bytes at this buffer's current position,
-     * returning them as a {@code ByteBuffer} with start set to 0, limit and capacity set to
-     * {@code size}, byte order set to this buffer's byte order; and then increments the position by
-     * {@code size}.
-     */
-    private static ByteBuffer getByteBuffer(ByteBuffer source, int size) {
-        if (size < 0) {
-            throw new IllegalArgumentException("size: " + size);
-        }
-        int originalLimit = source.limit();
-        int position = source.position();
-        int limit = position + size;
-        if ((limit < position) || (limit > originalLimit)) {
-            throw new BufferUnderflowException();
-        }
-        source.limit(limit);
-        try {
-            ByteBuffer result = source.slice();
-            result.order(source.order());
-            source.position(limit);
-            return result;
-        } finally {
-            source.limit(originalLimit);
-        }
-    }
-
     public static String toHex(byte[] value) {
         StringBuilder sb = new StringBuilder(value.length * 2);
         int len = value.length;
@@ -157,18 +42,6 @@ public class ApkSigningBlockUtils {
             sb.append(HEX_DIGITS[hi]).append(HEX_DIGITS[lo]);
         }
         return sb.toString();
-    }
-
-    public static class SignatureNotFoundException extends Exception {
-        private static final long serialVersionUID = 1L;
-
-        public SignatureNotFoundException(String message) {
-            super(message);
-        }
-
-        public SignatureNotFoundException(String message, Throwable cause) {
-            super(message, cause);
-        }
     }
 
 
