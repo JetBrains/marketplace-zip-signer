@@ -28,18 +28,12 @@ public enum ContentDigestAlgorithm {
     /**
      * SHA2-512 over 1 MB chunks.
      */
-    CHUNKED_SHA512("SHA-512", 512 / 8),
-
-    /**
-     * SHA2-256 over 4 KB chunks for APK verity.
-     */
-    VERITY_CHUNKED_SHA256("SHA-256", 256 / 8);
+    CHUNKED_SHA512("SHA-512", 512 / 8);
 
     private final String mJcaMessageDigestAlgorithm;
     private final int mChunkDigestOutputSizeBytes;
 
-    private ContentDigestAlgorithm(
-            String jcaMessageDigestAlgorithm, int chunkDigestOutputSizeBytes) {
+    ContentDigestAlgorithm(String jcaMessageDigestAlgorithm, int chunkDigestOutputSizeBytes) {
         mJcaMessageDigestAlgorithm = jcaMessageDigestAlgorithm;
         mChunkDigestOutputSizeBytes = chunkDigestOutputSizeBytes;
     }

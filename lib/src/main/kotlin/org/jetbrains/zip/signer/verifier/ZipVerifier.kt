@@ -240,24 +240,6 @@ object ZipVerifier {
                 centralDir,
                 ByteBufferDataSource(modifiedEocd)
             )
-            // Special checks for the verity algorithm requirements.
-            if (actualContentDigests.containsKey(ContentDigestAlgorithm.VERITY_CHUNKED_SHA256)) {
-                if (beforeApkSigningBlock.size() % ApkSigningBlockUtils.ANDROID_COMMON_PAGE_ALIGNMENT_BYTES != 0L) {
-                    throw RuntimeException(
-                        "APK Signing Block is not aligned on 4k boundary: " +
-                                beforeApkSigningBlock.size()
-                    )
-                }
-                val centralDirOffset =
-                    ZipUtils.getZipEocdCentralDirectoryOffset(eocd)
-                val signingBlockSize = centralDirOffset - beforeApkSigningBlock.size()
-                if (signingBlockSize % ApkSigningBlockUtils.ANDROID_COMMON_PAGE_ALIGNMENT_BYTES != 0L) {
-                    throw RuntimeException(
-                        "APK Signing Block size is not multiple of page size: " +
-                                signingBlockSize
-                    )
-                }
-            }
         } catch (e: DigestException) {
             throw RuntimeException("Failed to compute content digests", e)
         }
