@@ -1,6 +1,6 @@
 package org.jetbrains.zip.signer.keys
 
-import org.jetbrains.zip.signer.bytes.getLengthPrefixedArray
+import org.jetbrains.zip.signer.utils.getLengthPrefixedArray
 import java.io.File
 import java.math.BigInteger
 import java.nio.ByteBuffer

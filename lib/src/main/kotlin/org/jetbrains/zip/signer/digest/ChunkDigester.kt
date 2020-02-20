@@ -1,7 +1,7 @@
 package org.jetbrains.zip.signer.digest
 
-import org.jetbrains.zip.signer.bytes.setUnsignedInt32LittleEndian
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
+import org.jetbrains.zip.signer.utils.setUnsignedInt32LittleEndian
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 

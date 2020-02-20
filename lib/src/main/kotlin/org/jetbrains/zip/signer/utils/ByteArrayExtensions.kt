@@ -1,4 +1,4 @@
-package org.jetbrains.zip.signer.bytes
+package org.jetbrains.zip.signer.utils
 
 fun ByteArray.setUnsignedInt32LittleEndian(value: Int, offset: Int) {
     set(offset, (value and 0xff).toByte())

@@ -1,4 +1,4 @@
-package org.jetbrains.zip.signer.bytes
+package org.jetbrains.zip.signer.utils
 
 import java.nio.ByteBuffer
 
