@@ -7,14 +7,13 @@ import com.android.apksig.internal.util.ByteBufferDataSource
 import com.android.apksig.internal.zip.ZipUtils
 import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
+import org.jetbrains.zip.signer.digest.DigestUtils
 import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 import org.jetbrains.zip.signer.metadata.SignerBlock
 import org.jetbrains.zip.signer.metadata.ZipMetadata
-import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSections
 import java.io.File
-import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -173,7 +172,6 @@ object ZipVerifier {
         return result
     }
 
-    @Throws(IOException::class, NoSuchAlgorithmException::class)
     fun verifyIntegrity(
         beforeApkSigningBlock: DataSource,
         centralDir: DataSource,
@@ -201,11 +199,13 @@ object ZipVerifier {
         )
         val actualContentDigests: Map<ContentDigestAlgorithm, ByteArray>
         try {
-            actualContentDigests = computeContentDigests(
-                contentDigestAlgorithms,
-                beforeApkSigningBlock,
-                centralDir,
-                ByteBufferDataSource(modifiedEocd)
+            actualContentDigests = DigestUtils.computeDigest(
+                contentDigestAlgorithms.toList(),
+                listOf(
+                    beforeApkSigningBlock,
+                    centralDir,
+                    ByteBufferDataSource(modifiedEocd)
+                )
             )
         } catch (e: DigestException) {
             throw RuntimeException("Failed to compute content digests", e)

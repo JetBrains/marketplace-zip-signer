@@ -5,8 +5,8 @@ import com.android.apksig.util.DataSink
 import com.android.apksig.util.DataSinks
 import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
+import org.jetbrains.zip.signer.digest.DigestUtils
 import org.jetbrains.zip.signer.metadata.ZipMetadata
-import org.jetbrains.zip.signer.signing.computeContentDigests
 import org.jetbrains.zip.signer.signing.generateSignerBlock
 import java.io.File
 import java.io.RandomAccessFile
@@ -41,16 +41,18 @@ object ZipSigner {
 
         val algorithms = signerInfo.suggestedSignatureAlgorithms
 
-        val contentDigests = computeContentDigests(
+        val contentDigests = DigestUtils.computeDigest(
             algorithms.map { it.contentDigestAlgorithm },
-            inputDataSource.slice(0, inputZipSections.zipCentralDirectoryOffset),
-            inputDataSource.slice(
-                inputZipSections.zipCentralDirectoryOffset,
-                inputZipSections.zipCentralDirectorySizeBytes
-            ),
-            inputDataSource.slice(
-                inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes,
-                inputDataSource.size() - (inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes)
+            listOf(
+                inputDataSource.slice(0, inputZipSections.zipCentralDirectoryOffset),
+                inputDataSource.slice(
+                    inputZipSections.zipCentralDirectoryOffset,
+                    inputZipSections.zipCentralDirectorySizeBytes
+                ),
+                inputDataSource.slice(
+                    inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes,
+                    inputDataSource.size() - (inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes)
+                )
             )
         )
         val signerBlocks = listOf(
