@@ -8,6 +8,7 @@ import java.io.File
 import kotlin.system.exitProcess
 
 
+@ExperimentalUnsignedTypes
 object ZipSigningTool {
     @JvmStatic
     fun main(args: Array<String>) {

@@ -2,22 +2,18 @@ package org.jetbrains.zip.signer.zip
 
 import java.nio.ByteBuffer
 
+@ExperimentalUnsignedTypes
 class ZipSections(
     /**
      * Returns the start offset of the ZIP Central Directory. This value is taken from the
      * ZIP End of Central Directory record.
      */
-    val zipCentralDirectoryOffset: Long,
+    val zipCentralDirectoryOffset: UInt,
     /**
      * Returns the size (in bytes) of the ZIP Central Directory. This value is taken from the
      * ZIP End of Central Directory record.
      */
-    val zipCentralDirectorySizeBytes: Long,
-    /**
-     * Returns the number of records in the ZIP Central Directory. This value is taken from the
-     * ZIP End of Central Directory record.
-     */
-    val zipCentralDirectoryRecordCount: Int,
+    val zipCentralDirectorySizeBytes: UInt,
     /**
      * Returns the start offset of the ZIP End of Central Directory record. The record extends
      * until the very end of the APK.

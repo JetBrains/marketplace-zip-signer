@@ -4,7 +4,6 @@ package org.jetbrains.zip.signer.verifier
 import com.android.apksig.internal.apk.ApkSigningBlockUtils
 import com.android.apksig.internal.apk.ApkSigningBlockUtils.toHex
 import com.android.apksig.internal.util.ByteBufferDataSource
-import com.android.apksig.internal.zip.ZipUtils
 import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
 import org.jetbrains.zip.signer.digest.DigestUtils
@@ -12,6 +11,7 @@ import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 import org.jetbrains.zip.signer.metadata.SignerBlock
 import org.jetbrains.zip.signer.metadata.ZipMetadata
+import org.jetbrains.zip.signer.zip.ZipUtils
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSections
 import java.io.File
 import java.io.RandomAccessFile
@@ -24,6 +24,7 @@ import java.security.cert.X509Certificate
 import java.security.spec.X509EncodedKeySpec
 import java.util.*
 
+@ExperimentalUnsignedTypes
 object ZipVerifier {
     fun verify(file: File): List<ApkSigningBlockUtils.Result.SignerInfo> {
         RandomAccessFile(file, "r").use {
@@ -41,11 +42,11 @@ object ZipVerifier {
         val zipSections = findZipSections(dataSource)
         val signingBlock = ZipMetadata.findInZip(dataSource, zipSections)
             ?: throw SigningBlockNotFoundException("Zip archive contains no valid signing block")
-        val signingBlockStart = zipSections.zipCentralDirectoryOffset - signingBlock.size
+        val signingBlockStart = zipSections.zipCentralDirectoryOffset.toLong() - signingBlock.size
         val beforeApkSigningBlock = dataSource.slice(0, signingBlockStart)
         val centralDir = dataSource.slice(
-            zipSections.zipCentralDirectoryOffset,
-            zipSections.zipEndOfCentralDirectoryOffset - zipSections.zipCentralDirectoryOffset
+            zipSections.zipCentralDirectoryOffset.toLong(),
+            zipSections.zipEndOfCentralDirectoryOffset - zipSections.zipCentralDirectoryOffset.toLong()
         )
         return verify(
             beforeApkSigningBlock,
@@ -195,7 +196,7 @@ object ZipVerifier {
         eocd.position(eocdSavedPos)
         ZipUtils.setZipEocdCentralDirectoryOffset(
             modifiedEocd,
-            beforeApkSigningBlock.size()
+            beforeApkSigningBlock.size().toUInt()
         )
         val actualContentDigests: Map<ContentDigestAlgorithm, ByteArray>
         try {

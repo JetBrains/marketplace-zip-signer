@@ -11,6 +11,7 @@ class ZipMetadata private constructor(
     val signers: List<SignerBlock>,
     private val protobufRepresentation: ZipMetadataProto
 ) {
+    @ExperimentalUnsignedTypes
     companion object {
         private const val SIGNATURE_BLOCK_MAGIC_HI = 0x3234206b636f6c42L
         private const val SIGNATURE_BLOCK_MAGIC_LO = 0x20676953204b5040L
@@ -19,7 +20,7 @@ class ZipMetadata private constructor(
         private const val signatureBlockMetadataSize = signatureBlockHeaderSize + signatureBlockFooterSize
 
         fun findInZip(zipArchive: DataSource, zipSections: ZipSections): ZipMetadata? {
-            val centralDirStartOffset = zipSections.zipCentralDirectoryOffset
+            val centralDirStartOffset = zipSections.zipCentralDirectoryOffset.toLong()
             if (centralDirStartOffset < signatureBlockMetadataSize) return null
 
             val footer = zipArchive
