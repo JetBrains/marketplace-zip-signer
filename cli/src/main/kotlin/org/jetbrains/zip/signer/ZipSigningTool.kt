@@ -61,23 +61,7 @@ object ZipSigningTool {
     private fun verify(params: Array<String>) {
         val options = VerifyOptions()
         Args.parseOrExit(options, params)
-        val signers = ZipVerifier.verify(File(options.inputFilePath))
-        if (options.printCertificates) {
-            signers.forEachIndexed { signerIndex, signer ->
-                println("Signer #${signerIndex}")
-                signer.fold(
-                    { certificates ->
-                        certificates.forEach { certificate ->
-                            println(certificate)
-                        }
-                    },
-                    {
-                        System.err.println("Failed to verify: ${it.message}")
-                    }
-                )
-
-            }
-        }
+        ZipVerifier.verify(File(options.inputFilePath))
     }
 }
 
