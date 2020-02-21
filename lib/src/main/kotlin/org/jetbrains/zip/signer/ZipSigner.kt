@@ -1,7 +1,7 @@
 package org.jetbrains.zip.signer
 
-import com.android.apksig.util.DataSource
-import com.android.apksig.util.DataSources
+import org.jetbrains.zip.signer.datasource.DataSource
+import org.jetbrains.zip.signer.datasource.FileChannelDataSource
 import org.jetbrains.zip.signer.digest.DigestUtils
 import org.jetbrains.zip.signer.metadata.ZipMetadata
 import org.jetbrains.zip.signer.signing.generateSignerBlock
@@ -23,7 +23,9 @@ object ZipSigner {
             RandomAccessFile(outputFile, "rw").use { outputRandomAccessFile ->
                 outputRandomAccessFile.setLength(0)
                 sign(
-                    inputDataSource = DataSources.asDataSource(inputRandomAccessFile),
+                    inputDataSource = FileChannelDataSource(
+                        inputRandomAccessFile.channel
+                    ),
                     outputFileChannel = outputRandomAccessFile.channel,
                     signerInfo = signerInfo
                 )

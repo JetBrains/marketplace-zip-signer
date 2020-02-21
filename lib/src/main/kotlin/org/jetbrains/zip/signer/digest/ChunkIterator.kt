@@ -1,6 +1,6 @@
 package org.jetbrains.zip.signer.digest
 
-import com.android.apksig.util.DataSource
+import org.jetbrains.zip.signer.datasource.DataSource
 import java.nio.ByteBuffer
 import java.util.*
 

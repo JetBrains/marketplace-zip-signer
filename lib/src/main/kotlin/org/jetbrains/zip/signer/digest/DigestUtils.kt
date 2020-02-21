@@ -1,6 +1,6 @@
 package org.jetbrains.zip.signer.digest
 
-import com.android.apksig.util.DataSource
+import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 
 object DigestUtils {

@@ -1,6 +1,6 @@
 package org.jetbrains.zip.signer.metadata
 
-import com.android.apksig.util.DataSource
+import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.proto.ZipMetadataProto
 import org.jetbrains.zip.signer.proto.ZipSignatureBlockProto
 import org.jetbrains.zip.signer.zip.ZipSections

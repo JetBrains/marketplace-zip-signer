@@ -3,9 +3,9 @@ package org.jetbrains.zip.signer.verifier
 
 import com.android.apksig.internal.apk.ApkSigningBlockUtils
 import com.android.apksig.internal.apk.ApkSigningBlockUtils.toHex
-import com.android.apksig.internal.util.ByteBufferDataSource
-import com.android.apksig.util.DataSource
-import com.android.apksig.util.DataSources
+import org.jetbrains.zip.signer.datasource.ByteBufferDataSource
+import org.jetbrains.zip.signer.datasource.DataSource
+import org.jetbrains.zip.signer.datasource.FileChannelDataSource
 import org.jetbrains.zip.signer.digest.DigestUtils
 import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
@@ -27,13 +27,7 @@ import java.util.*
 object ZipVerifier {
     fun verify(file: File): List<ApkSigningBlockUtils.Result.SignerInfo> {
         RandomAccessFile(file, "r").use {
-            return verify(
-                DataSources.asDataSource(
-                    it,
-                    0,
-                    it.length()
-                )
-            )
+            return verify(FileChannelDataSource(it.channel))
         }
     }
 

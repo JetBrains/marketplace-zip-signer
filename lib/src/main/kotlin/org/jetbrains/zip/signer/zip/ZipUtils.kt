@@ -1,6 +1,6 @@
 package org.jetbrains.zip.signer.zip
 
-import com.android.apksig.util.DataSource
+import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.utils.getUnsignedInt
 import org.jetbrains.zip.signer.utils.getUnsignedShort
 import org.jetbrains.zip.signer.utils.isLittleEndian
