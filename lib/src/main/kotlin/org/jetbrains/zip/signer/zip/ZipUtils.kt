@@ -18,95 +18,57 @@ object ZipUtils {
     private const val ZIP_EOCD_CENTRAL_DIR_OFFSET_FIELD_OFFSET = 16
     private const val ZIP_EOCD_COMMENT_LENGTH_FIELD_OFFSET = 20
 
-    fun findZipSections(apk: DataSource): ZipSections {
-        val (eocdBuf, eocdOffset) = findZipEndOfCentralDirectoryRecord(apk)
+    fun findZipSections(zip: DataSource): ZipSections {
+        val (eocdOffset, eocd) = findEocdInBuffer(zip)
             ?: throw ZipException("ZIP End of Central Directory record not found")
-        eocdBuf.order(ByteOrder.LITTLE_ENDIAN)
-        val cdStartOffset = getZipEocdCentralDirectoryOffset(eocdBuf)
-        if (cdStartOffset.toLong() > eocdOffset) {
-            throw ZipException(
-                "ZIP Central Directory start offset out of range: " + cdStartOffset
-                        + ". ZIP End of Central Directory offset: " + eocdOffset
-            )
+        val centralDirectoryEndOffset = eocd.centralDirectoryOffset.toLong() + eocd.centralDirectorySize.toLong()
+
+        if (eocd.centralDirectoryOffset.toLong() > eocdOffset) {
+            throw ZipException("ZIP Central Directory start offset out of range")
         }
-        val cdSizeBytes = getZipEocdCentralDirectorySizeBytes(eocdBuf)
-        val cdEndOffset = cdStartOffset + cdSizeBytes
-        if (cdEndOffset.toLong() > eocdOffset) {
-            throw ZipException(
-                "ZIP Central Directory overlaps with End of Central Directory"
-                        + ". CD end: " + cdEndOffset
-                        + ", EoCD start: " + eocdOffset
-            )
+        if (centralDirectoryEndOffset > eocdOffset) {
+            throw ZipException("ZIP Central Directory overlaps with End of Central Directory")
         }
+
         return ZipSections(
-            cdStartOffset,
-            cdSizeBytes,
+            eocd.centralDirectoryOffset.toLong(),
+            eocd.centralDirectorySize.toLong(),
             eocdOffset,
-            eocdBuf
+            zip.size() - eocdOffset
         )
     }
 
-    private fun findZipEndOfCentralDirectoryRecord(zip: DataSource): Pair<ByteBuffer, Long>? {
+    /**
+     * We are guessing that it's a zip archive without comment to read only 22 bytes of data.
+     * If we are wrong we are parsing iterating over archive content from the end to the beginning to find EOCD
+     */
+    private fun findEocdInBuffer(zip: DataSource) =
+        findEocdInBuffer(zip, 0u) ?: findEocdInBuffer(zip, UShort.MAX_VALUE)
+
+
+    private fun findEocdInBuffer(zip: DataSource, maxCommentSize: UShort): Pair<Long, ZipEocdData>? {
         val fileSize = zip.size()
         if (fileSize < ZIP_EOCD_REC_MIN_SIZE) return null
-        val result = findZipEndOfCentralDirectoryRecord(zip, 0u)
-        return result ?: findZipEndOfCentralDirectoryRecord(
-            zip,
-            UShort.MAX_VALUE
-        )
-    }
-
-
-    private fun findZipEndOfCentralDirectoryRecord(
-        zip: DataSource, maxCommentSize: UShort
-    ): Pair<ByteBuffer, Long>? {
-        val fileSize = zip.size()
-        if (fileSize < ZIP_EOCD_REC_MIN_SIZE) return null
-
         val maxEocdSize = ZIP_EOCD_REC_MIN_SIZE + maxCommentSize.toInt().coerceAtMost(
             fileSize.toInt() - ZIP_EOCD_REC_MIN_SIZE
         )
         val bufOffsetInFile = fileSize - maxEocdSize
-        val buf = zip.getByteBuffer(bufOffsetInFile, maxEocdSize)
-        buf.order(ByteOrder.LITTLE_ENDIAN)
-        val eocdOffsetInBuf = findZipEndOfCentralDirectoryRecord(buf)
-        if (eocdOffsetInBuf == -1) { // No EoCD record found in the buffer
-            return null
-        }
-        // EoCD found
-        buf.position(eocdOffsetInBuf)
-        val eocd = buf.slice()
-        eocd.order(ByteOrder.LITTLE_ENDIAN)
-        return eocd to bufOffsetInFile + eocdOffsetInBuf
+        val buf = zip.getByteBuffer(bufOffsetInFile, maxEocdSize).apply { order(ByteOrder.LITTLE_ENDIAN) }
+        val (eocdOffsetInBuffer, eocd) = findEocdInBuffer(buf) ?: return null
+        return bufOffsetInFile + eocdOffsetInBuffer to eocd
     }
 
-    private fun findZipEndOfCentralDirectoryRecord(zipContents: ByteBuffer): Int {
+    private fun findEocdInBuffer(zipContents: ByteBuffer): Pair<Int, ZipEocdData>? {
         assert(zipContents.isLittleEndian())
-        val archiveSize = zipContents.capacity()
-        if (archiveSize < ZIP_EOCD_REC_MIN_SIZE) {
-            return -1
+        val eocdWithEmptyCommentStartPosition = zipContents.capacity() - ZIP_EOCD_REC_MIN_SIZE
+        if (eocdWithEmptyCommentStartPosition < 0) return null
+        for (possibleCommentLength in 0..eocdWithEmptyCommentStartPosition.coerceAtMost(UShort.MAX_VALUE.toInt())) {
+            zipContents.position(eocdWithEmptyCommentStartPosition - possibleCommentLength)
+            val zipEocd = parseEOCD(zipContents) ?: continue
+            if (zipEocd.commentLength.toInt() != possibleCommentLength) continue
+            return zipContents.position() to zipEocd
         }
-        val maxCommentLength = (archiveSize - ZIP_EOCD_REC_MIN_SIZE).coerceAtMost(UShort.MAX_VALUE.toInt()).toUShort()
-        val eocdWithEmptyCommentStartPosition = archiveSize - ZIP_EOCD_REC_MIN_SIZE
-        for (expectedCommentLength in 0u..maxCommentLength.toUInt()) {
-            val eocdStartPos = eocdWithEmptyCommentStartPosition - expectedCommentLength.toInt()
-            if (zipContents.getInt(eocdStartPos) == ZIP_EOCD_REC_SIG) {
-                val actualCommentLength = zipContents.getUnsignedShort(
-                    eocdStartPos + ZIP_EOCD_COMMENT_LENGTH_FIELD_OFFSET
-                )
-                if (actualCommentLength == expectedCommentLength.toUShort()) {
-                    return eocdStartPos
-                }
-            }
-        }
-        return -1
-    }
-
-    private fun getZipEocdCentralDirectoryOffset(zipEndOfCentralDirectory: ByteBuffer): UInt {
-        assert(zipEndOfCentralDirectory.isLittleEndian())
-        return zipEndOfCentralDirectory.getUnsignedInt(
-            zipEndOfCentralDirectory.position() + ZIP_EOCD_CENTRAL_DIR_OFFSET_FIELD_OFFSET
-        )
+        return null
     }
 
     fun setZipEocdCentralDirectoryOffset(
@@ -118,11 +80,21 @@ object ZipUtils {
         )
     }
 
-    fun getZipEocdCentralDirectorySizeBytes(zipEndOfCentralDirectory: ByteBuffer): UInt {
-        assert(zipEndOfCentralDirectory.isLittleEndian())
-        return zipEndOfCentralDirectory.getUnsignedInt(
-            zipEndOfCentralDirectory.position() + ZIP_EOCD_CENTRAL_DIR_SIZE_FIELD_OFFSET
-        )
+    private fun parseEOCD(eocdSection: ByteBuffer): ZipEocdData? {
+        with(eocdSection) {
+            assert(isLittleEndian())
+            if (getInt(position()) != ZIP_EOCD_REC_SIG) return null
+            return ZipEocdData(
+                getUnsignedInt(position() + ZIP_EOCD_CENTRAL_DIR_OFFSET_FIELD_OFFSET),
+                getUnsignedInt(position() + ZIP_EOCD_CENTRAL_DIR_SIZE_FIELD_OFFSET),
+                getUnsignedShort(position() + ZIP_EOCD_COMMENT_LENGTH_FIELD_OFFSET)
+            )
+        }
     }
 
+    data class ZipEocdData(
+        val centralDirectoryOffset: UInt,
+        val centralDirectorySize: UInt,
+        val commentLength: UShort
+    )
 }

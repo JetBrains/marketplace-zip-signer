@@ -15,7 +15,6 @@ import org.jetbrains.zip.signer.zip.ZipUtils
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSections
 import java.io.File
 import java.io.RandomAccessFile
-import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.*
 import java.security.cert.CertificateException
@@ -42,17 +41,17 @@ object ZipVerifier {
         val zipSections = findZipSections(dataSource)
         val signingBlock = ZipMetadata.findInZip(dataSource, zipSections)
             ?: throw SigningBlockNotFoundException("Zip archive contains no valid signing block")
-        val signingBlockStart = zipSections.zipCentralDirectoryOffset.toLong() - signingBlock.size
+        val signingBlockStart = zipSections.centralDirectoryOffset - signingBlock.size
         val beforeApkSigningBlock = dataSource.slice(0, signingBlockStart)
         val centralDir = dataSource.slice(
-            zipSections.zipCentralDirectoryOffset.toLong(),
-            zipSections.zipEndOfCentralDirectoryOffset - zipSections.zipCentralDirectoryOffset.toLong()
+            zipSections.centralDirectoryOffset,
+            zipSections.endOfCentralDirectoryOffset - zipSections.centralDirectoryOffset
         )
         return verify(
             beforeApkSigningBlock,
             signingBlock,
             centralDir,
-            zipSections.zipEndOfCentralDirectory
+            dataSource.slice(zipSections.endOfCentralDirectoryOffset, zipSections.endOfCentralDirectorySizeBytes)
         )
     }
 
@@ -60,7 +59,7 @@ object ZipVerifier {
         beforeApkSigningBlock: DataSource,
         zipMetadata: ZipMetadata,
         centralDir: DataSource,
-        eocd: ByteBuffer
+        eocd: DataSource
     ): List<ApkSigningBlockUtils.Result.SignerInfo> {
         val contentDigestsToVerify = HashSet<ContentDigestAlgorithm>(1)
         val signers = parseSigners(
@@ -176,7 +175,7 @@ object ZipVerifier {
     fun verifyIntegrity(
         beforeApkSigningBlock: DataSource,
         centralDir: DataSource,
-        eocd: ByteBuffer,
+        eocd: DataSource,
         contentDigestAlgorithms: Set<ContentDigestAlgorithm>,
         signers: Collection<ApkSigningBlockUtils.Result.SignerInfo>
     ) {
@@ -187,13 +186,9 @@ object ZipVerifier {
         // For the purposes of verifying integrity, ZIP End of Central Directory (EoCD) must be
 // treated as though its Central Directory offset points to the start of APK Signing Block.
 // We thus modify the EoCD accordingly.
-        val modifiedEocd = ByteBuffer.allocate(eocd.remaining())
-        val eocdSavedPos = eocd.position()
-        modifiedEocd.order(ByteOrder.LITTLE_ENDIAN)
-        modifiedEocd.put(eocd)
-        modifiedEocd.flip()
-        // restore eocd to position prior to modification in case it is to be used elsewhere
-        eocd.position(eocdSavedPos)
+        val modifiedEocd = eocd.getByteBuffer(0, eocd.size().toInt()).apply {
+            order(ByteOrder.LITTLE_ENDIAN)
+        }
         ZipUtils.setZipEocdCentralDirectoryOffset(
             modifiedEocd,
             beforeApkSigningBlock.size().toUInt()

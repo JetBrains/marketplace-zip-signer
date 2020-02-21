@@ -20,7 +20,7 @@ class ZipMetadata private constructor(
         private const val signatureBlockMetadataSize = signatureBlockHeaderSize + signatureBlockFooterSize
 
         fun findInZip(zipArchive: DataSource, zipSections: ZipSections): ZipMetadata? {
-            val centralDirStartOffset = zipSections.zipCentralDirectoryOffset.toLong()
+            val centralDirStartOffset = zipSections.centralDirectoryOffset
             if (centralDirStartOffset < signatureBlockMetadataSize) return null
 
             val footer = zipArchive

@@ -36,7 +36,7 @@ object ZipSigner {
         outputFileChannel: FileChannel,
         signerInfo: SignerInfo
     ) {
-        val inputZipSections = org.jetbrains.zip.signer.zip.ZipUtils.findZipSections(inputDataSource)
+        val inputZipSections = ZipUtils.findZipSections(inputDataSource)
         val inputSigningBlock = ZipMetadata.findInZip(inputDataSource, inputZipSections)
 
         val algorithms = signerInfo.suggestedSignatureAlgorithms
@@ -44,14 +44,14 @@ object ZipSigner {
         val contentDigests = DigestUtils.computeDigest(
             algorithms.map { it.contentDigestAlgorithm },
             listOf(
-                inputDataSource.slice(0, inputZipSections.zipCentralDirectoryOffset.toLong()),
+                inputDataSource.slice(0, inputZipSections.centralDirectoryOffset),
                 inputDataSource.slice(
-                    inputZipSections.zipCentralDirectoryOffset.toLong(),
-                    inputZipSections.zipCentralDirectorySizeBytes.toLong()
+                    inputZipSections.centralDirectoryOffset,
+                    inputZipSections.centralDirectorySizeBytes
                 ),
                 inputDataSource.slice(
-                    (inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes).toLong(),
-                    inputDataSource.size() - (inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes).toLong()
+                    (inputZipSections.centralDirectoryOffset + inputZipSections.centralDirectorySizeBytes),
+                    inputDataSource.size() - (inputZipSections.centralDirectoryOffset + inputZipSections.centralDirectorySizeBytes)
                 )
             )
         )
@@ -63,24 +63,24 @@ object ZipSigner {
 
         val signingBlock = ZipMetadata.fromSignerBlocks(signerBlocks)
 
-        val eocdOffset = inputZipSections.zipCentralDirectoryOffset + inputZipSections.zipCentralDirectorySizeBytes
+        val eocdOffset = inputZipSections.centralDirectoryOffset + inputZipSections.centralDirectorySizeBytes
         val outputEocdRecord = inputDataSource.getByteBuffer(
-            eocdOffset.toLong(),
-            (inputDataSource.size() - eocdOffset.toLong()).toInt()
+            eocdOffset,
+            (inputDataSource.size() - eocdOffset).toInt()
         ).apply {
             order(ByteOrder.LITTLE_ENDIAN)
         }
 
         ZipUtils.setZipEocdCentralDirectoryOffset(
             outputEocdRecord,
-            (inputZipSections.zipCentralDirectoryOffset.toLong() + signingBlock.size).toUInt()
+            (inputZipSections.centralDirectoryOffset + signingBlock.size).toUInt()
         )
 
-        inputDataSource.feed(0, inputZipSections.zipCentralDirectoryOffset.toLong(), outputFileChannel)
+        inputDataSource.feed(0, inputZipSections.centralDirectoryOffset, outputFileChannel)
         outputFileChannel.write(ByteBuffer.wrap(signingBlock.toByteArray()))
         inputDataSource.feed(
-            inputZipSections.zipCentralDirectoryOffset.toLong(),
-            inputZipSections.zipCentralDirectorySizeBytes.toLong(),
+            inputZipSections.centralDirectoryOffset,
+            inputZipSections.centralDirectorySizeBytes,
             outputFileChannel
         )
         outputFileChannel.write(outputEocdRecord)
