@@ -16,7 +16,6 @@
 
 package com.android.apksig.internal.util;
 
-import com.android.apksig.util.DataSink;
 import com.android.apksig.util.DataSource;
 
 import java.io.IOException;
@@ -24,6 +23,7 @@ import java.io.RandomAccessFile;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 
 /**
  * {@link DataSource} backed by a {@link FileChannel} for {@link RandomAccessFile} access.
@@ -91,7 +91,7 @@ public class FileChannelDataSource implements DataSource {
     }
 
     @Override
-    public void feed(long offset, long size, DataSink sink) throws IOException {
+    public void feed(long offset, long size, WritableByteChannel byteChannel) throws IOException {
         long sourceSize = size();
         checkChunkValid(offset, size, sourceSize);
         if (size == 0) {
@@ -117,7 +117,7 @@ public class FileChannelDataSource implements DataSource {
                 }
             }
             buf.flip();
-            sink.consume(buf);
+            byteChannel.write(buf);
             buf.clear();
             chunkOffsetInFile += chunkSize;
             remaining -= chunkSize;

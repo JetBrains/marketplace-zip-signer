@@ -16,11 +16,11 @@
 
 package com.android.apksig.internal.util;
 
-import com.android.apksig.util.DataSink;
 import com.android.apksig.util.DataSource;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 
 /**
  * {@link DataSource} backed by a {@link ByteBuffer}.
@@ -81,11 +81,11 @@ public class ByteBufferDataSource implements DataSource {
     }
 
     @Override
-    public void feed(long offset, long size, DataSink sink) throws IOException {
+    public void feed(long offset, long size, WritableByteChannel byteChannel) throws IOException {
         if ((size < 0) || (size > mSize)) {
             throw new IndexOutOfBoundsException("size: " + size + ", source size: " + mSize);
         }
-        sink.consume(getByteBuffer(offset, (int) size));
+        byteChannel.write(getByteBuffer(offset, (int) size));
     }
 
     @Override

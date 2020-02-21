@@ -1,8 +1,6 @@
 package org.jetbrains.zip.signer
 
 import com.android.apksig.internal.zip.ZipUtils
-import com.android.apksig.util.DataSink
-import com.android.apksig.util.DataSinks
 import com.android.apksig.util.DataSource
 import com.android.apksig.util.DataSources
 import org.jetbrains.zip.signer.digest.DigestUtils
@@ -12,6 +10,7 @@ import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.channels.FileChannel
 
 object ZipSigner {
     fun sign(
@@ -24,7 +23,7 @@ object ZipSigner {
                 outputRandomAccessFile.setLength(0)
                 sign(
                     inputDataSource = DataSources.asDataSource(inputRandomAccessFile),
-                    outputDataSink = DataSinks.asDataSink(outputRandomAccessFile),
+                    outputFileChannel = outputRandomAccessFile.channel,
                     signerInfo = signerInfo
                 )
             }
@@ -33,7 +32,7 @@ object ZipSigner {
 
     private fun sign(
         inputDataSource: DataSource,
-        outputDataSink: DataSink,
+        outputFileChannel: FileChannel,
         signerInfo: SignerInfo
     ) {
         val inputZipSections = org.jetbrains.zip.signer.zip.ZipUtils.findZipSections(inputDataSource)
@@ -76,13 +75,11 @@ object ZipSigner {
             inputZipSections.zipCentralDirectoryOffset + signingBlock.size
         )
 
-        outputDataSink.consume(inputDataSource.getByteBuffer(0, inputZipSections.zipCentralDirectoryOffset.toInt()))
-        outputDataSink.consume(ByteBuffer.wrap(signingBlock.toByteArray()))
-        outputDataSink.consume(
-            inputDataSource.getByteBuffer(
-                inputZipSections.zipCentralDirectoryOffset, inputZipSections.zipCentralDirectorySizeBytes.toInt()
-            )
+        inputDataSource.feed(0, inputZipSections.zipCentralDirectoryOffset, outputFileChannel)
+        outputFileChannel.write(ByteBuffer.wrap(signingBlock.toByteArray()))
+        inputDataSource.feed(
+            inputZipSections.zipCentralDirectoryOffset, inputZipSections.zipCentralDirectorySizeBytes, outputFileChannel
         )
-        outputDataSink.consume(outputEocdRecord)
+        outputFileChannel.write(outputEocdRecord)
     }
 }

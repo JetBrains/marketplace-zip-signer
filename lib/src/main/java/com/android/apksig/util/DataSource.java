@@ -18,6 +18,7 @@ package com.android.apksig.util;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 
 /**
  * Abstract representation of a source of data.
@@ -65,7 +66,7 @@ public interface DataSource {
      * @throws IndexOutOfBoundsException if {@code offset} or {@code size} is negative, or if
      *                                   {@code offset + size} is greater than {@link #size()}.
      */
-    void feed(long offset, long size, DataSink sink) throws IOException;
+    void feed(long offset, long size, WritableByteChannel writableByteChannel) throws IOException;
 
     /**
      * Returns a buffer holding the contents of the specified chunk of data from this data source.
