@@ -1,23 +1,23 @@
 package org.jetbrains.zip.signer.verifier
 
 
-import com.android.apksig.internal.apk.ApkSigningBlockUtils
-import com.android.apksig.internal.apk.ApkSigningBlockUtils.toHex
 import org.jetbrains.zip.signer.datasource.ByteBufferDataSource
 import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.datasource.FileChannelDataSource
 import org.jetbrains.zip.signer.digest.DigestUtils
 import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
+import org.jetbrains.zip.signer.exceptions.ZipVerificationException
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 import org.jetbrains.zip.signer.metadata.SignerBlock
 import org.jetbrains.zip.signer.metadata.ZipMetadata
+import org.jetbrains.zip.signer.utils.toHexString
 import org.jetbrains.zip.signer.zip.ZipUtils
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSections
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteOrder
 import java.security.*
-import java.security.cert.CertificateException
+import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.spec.X509EncodedKeySpec
@@ -25,28 +25,31 @@ import java.util.*
 
 @ExperimentalUnsignedTypes
 object ZipVerifier {
-    fun verify(file: File): List<ApkSigningBlockUtils.Result.SignerInfo> {
+    /**
+     * Verifies validity of signatures and returns certificates grouped by signer
+     */
+    fun verify(file: File): List<Result<List<Certificate>>> {
         RandomAccessFile(file, "r").use {
             return verify(FileChannelDataSource(it.channel))
         }
     }
 
-    private fun verify(dataSource: DataSource): List<ApkSigningBlockUtils.Result.SignerInfo> {
+    private fun verify(dataSource: DataSource): List<Result<List<Certificate>>> {
         val zipSections = findZipSections(dataSource)
         val signingBlock = ZipMetadata.findInZip(dataSource, zipSections)
             ?: throw SigningBlockNotFoundException("Zip archive contains no valid signing block")
-        val signingBlockStart = zipSections.centralDirectoryOffset - signingBlock.size
-        val beforeApkSigningBlock = dataSource.slice(0, signingBlockStart)
+        val beforeApkSigningBlock = dataSource.slice(
+            0, zipSections.centralDirectoryOffset - signingBlock.size
+        )
         val centralDir = dataSource.slice(
             zipSections.centralDirectoryOffset,
             zipSections.endOfCentralDirectoryOffset - zipSections.centralDirectoryOffset
         )
-        return verify(
-            beforeApkSigningBlock,
-            signingBlock,
-            centralDir,
-            dataSource.slice(zipSections.endOfCentralDirectoryOffset, zipSections.endOfCentralDirectorySizeBytes)
+        val endOfCentralDirectory = dataSource.slice(
+            zipSections.endOfCentralDirectoryOffset,
+            zipSections.endOfCentralDirectorySizeBytes
         )
+        return verify(beforeApkSigningBlock, signingBlock, centralDir, endOfCentralDirectory)
     }
 
     private fun verify(
@@ -54,14 +57,14 @@ object ZipVerifier {
         zipMetadata: ZipMetadata,
         centralDir: DataSource,
         eocd: DataSource
-    ): List<ApkSigningBlockUtils.Result.SignerInfo> {
+    ): List<Result<List<Certificate>>> {
         val contentDigestsToVerify = HashSet<ContentDigestAlgorithm>(1)
         val signers = parseSigners(
             zipMetadata,
             contentDigestsToVerify
         )
         verifyIntegrity(
-            beforeApkSigningBlock, centralDir, eocd, contentDigestsToVerify, signers
+            beforeApkSigningBlock, centralDir, eocd, contentDigestsToVerify, zipMetadata
         )
         return signers
     }
@@ -69,33 +72,25 @@ object ZipVerifier {
     private fun parseSigners(
         zipMetadata: ZipMetadata,
         contentDigestsToVerify: MutableSet<ContentDigestAlgorithm>
-    ): List<ApkSigningBlockUtils.Result.SignerInfo> {
-        val certFactory: CertificateFactory
-        certFactory = try {
-            CertificateFactory.getInstance("X.509")
-        } catch (e: CertificateException) {
-            throw RuntimeException("Failed to obtain X.509 CertificateFactory", e)
-        }
+    ): List<Result<List<Certificate>>> {
+        val certFactory = CertificateFactory.getInstance("X.509")
         return zipMetadata.signers.map {
-            parseSigner(it, certFactory, contentDigestsToVerify)
+            verifySigner(it, certFactory, contentDigestsToVerify)
         }
     }
 
-    private fun parseSigner(
+    private fun verifySigner(
         signer: SignerBlock,
         certFactory: CertificateFactory,
         contentDigestsToVerify: MutableSet<ContentDigestAlgorithm>
-    ): ApkSigningBlockUtils.Result.SignerInfo {
-        val result = ApkSigningBlockUtils.Result.SignerInfo()
+    ): Result<List<Certificate>> {
         val signedData = signer.dataToSign
 
         val publicKeyBytes = signer.encodedPublicKey
 
-        result.signatures.addAll(signer.signatures)
-        if (result.signatures.isEmpty()) {
-            result.addError(Issue.V2_SIG_NO_SIGNATURES)
-            return result
-        }
+        if (signer.signatures.isEmpty()) return Result.failure(
+            ZipVerificationException("Signer block contains no signatures")
+        )
 
         signer.signatures.forEach { signature ->
             val signatureAlgorithm = signature.algorithm
@@ -107,8 +102,7 @@ object ZipVerifier {
                     X509EncodedKeySpec(publicKeyBytes)
                 )
             } catch (e: Exception) {
-                result.addError(Issue.V2_SIG_MALFORMED_PUBLIC_KEY, e)
-                return result
+                return Result.failure(ZipVerificationException("Malformed public key"))
             }
             try {
                 val sig = Signature.getInstance(jcaSignatureAlgorithm)
@@ -116,54 +110,42 @@ object ZipVerifier {
                 sig.update(signedData.toByteArray())
                 val sigBytes = signature.signatureBytes
                 if (!sig.verify(sigBytes)) {
-                    result.addError(Issue.V2_SIG_DID_NOT_VERIFY, signatureAlgorithm)
-                    return result
+                    return Result.failure(ZipVerificationException("Signature over signed-data did not verify"))
                 }
-                result.verifiedSignatures[signatureAlgorithm] = sigBytes
                 contentDigestsToVerify.add(signatureAlgorithm.contentDigestAlgorithm)
             } catch (e: InvalidKeyException) {
-                result.addError(Issue.V2_SIG_VERIFY_EXCEPTION, signatureAlgorithm, e)
-                return result
+                return Result.failure(ZipVerificationException("Signature over signed-data did not verify"))
             } catch (e: InvalidAlgorithmParameterException) {
-                result.addError(Issue.V2_SIG_VERIFY_EXCEPTION, signatureAlgorithm, e)
-                return result
+                return Result.failure(ZipVerificationException("Signature over signed-data did not verify"))
             } catch (e: SignatureException) {
-                result.addError(Issue.V2_SIG_VERIFY_EXCEPTION, signatureAlgorithm, e)
-                return result
+                return Result.failure(ZipVerificationException("Signature over signed-data did not verify"))
             }
         }
 
-        result.certs.addAll(signedData.encodedCertificates.map {
+        val certificates = signedData.encodedCertificates.map {
             certFactory.generateCertificate(it.inputStream()) as X509Certificate
-        })
-        if (result.certs.isEmpty()) {
-            result.addError(Issue.V2_SIG_NO_CERTIFICATES)
-            return result
         }
-        val mainCertificate = result.certs[0]
+        if (certificates.isEmpty()) {
+            return Result.failure(ZipVerificationException("Signer has no certificates"))
+        }
+
+        val mainCertificate = certificates[0]
         val certificatePublicKeyBytes = mainCertificate.publicKey.encoded
 
         if (!Arrays.equals(publicKeyBytes, certificatePublicKeyBytes)) {
-            result.addError(
-                Issue.V2_SIG_PUBLIC_KEY_MISMATCH_BETWEEN_CERTIFICATE_AND_SIGNATURES_RECORD,
-                ApkSigningBlockUtils.toHex(certificatePublicKeyBytes),
-                ApkSigningBlockUtils.toHex(publicKeyBytes)
+            return Result.failure(
+                ZipVerificationException("Public key mismatch between certificate and signature record")
             )
-            return result
         }
 
-        result.contentDigests.addAll(signer.dataToSign.digests)
-        val digestAlgorithmsFromSignaturesRecord = result.signatures.map { it.algorithm.contentDigestAlgorithm }
-        val digestAlgorithmsFromDigestsRecord = result.contentDigests.map { it.algorithm }
+        val digestAlgorithmsFromSignaturesRecord = signer.signatures.map { it.algorithm.contentDigestAlgorithm }
+        val digestAlgorithmsFromDigestsRecord = signer.dataToSign.digests.map { it.algorithm }
         if (digestAlgorithmsFromSignaturesRecord != digestAlgorithmsFromDigestsRecord) {
-            result.addError(
-                Issue.V2_SIG_SIG_ALG_MISMATCH_BETWEEN_SIGNATURES_AND_DIGESTS_RECORDS,
-                digestAlgorithmsFromSignaturesRecord,
-                digestAlgorithmsFromDigestsRecord
+            return Result.failure(
+                ZipVerificationException("Signature algorithms mismatch between signatures and digests records")
             )
-            return result
         }
-        return result
+        return Result.success(certificates)
     }
 
     fun verifyIntegrity(
@@ -171,7 +153,7 @@ object ZipVerifier {
         centralDir: DataSource,
         eocd: DataSource,
         contentDigestAlgorithms: Set<ContentDigestAlgorithm>,
-        signers: Collection<ApkSigningBlockUtils.Result.SignerInfo>
+        zipMetadata: ZipMetadata
     ) {
         if (contentDigestAlgorithms.isEmpty()) { // This should never occur because this method is invoked once at least one signature
 // is verified, meaning at least one content digest is known.
@@ -209,8 +191,8 @@ object ZipVerifier {
         }
         // Compare digests computed over the rest of APK against the corresponding expected digests
 // in signer blocks.
-        for (signerInfo in signers) {
-            for (expected in signerInfo.contentDigests) {
+        for (signerInfo in zipMetadata.signers) {
+            for (expected in signerInfo.dataToSign.digests) {
                 val contentDigestAlgorithm = expected.algorithm
                 // if the current digest algorithm is not in the list provided by the caller then
 // ignore it; the signer may contain digests not recognized by the specified SDK
@@ -223,10 +205,9 @@ object ZipVerifier {
                 if (!Arrays.equals(expectedDigest, actualDigest)) {
                     throw Exception(
                         "APK integrity check failed. ${contentDigestAlgorithm}s digest mismatch."
-                                + " Expected: ${toHex(expectedDigest)}, actual: ${toHex(actualDigest)}"
+                                + " Expected: ${expectedDigest.toHexString()}, actual: ${actualDigest?.toHexString()}"
                     )
                 }
-                signerInfo.verifiedContentDigests[contentDigestAlgorithm] = actualDigest
             }
         }
     }

@@ -64,10 +64,18 @@ object ZipSigningTool {
         val signers = ZipVerifier.verify(File(options.inputFilePath))
         if (options.printCertificates) {
             signers.forEachIndexed { signerIndex, signer ->
-                signer.certs.forEach { certificate ->
-                    println("Signer #${signerIndex}")
-                    println(certificate)
-                }
+                println("Signer #${signerIndex}")
+                signer.fold(
+                    { certificates ->
+                        certificates.forEach { certificate ->
+                            println(certificate)
+                        }
+                    },
+                    {
+                        System.err.println("Failed to verify: ${it.message}")
+                    }
+                )
+
             }
         }
     }

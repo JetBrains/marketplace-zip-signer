@@ -17,6 +17,14 @@ idea {
     }
 }
 
+compileKotlin {
+    kotlinOptions.freeCompilerArgs = ["-Xallow-result-return-type"]
+}
+
+compileTestKotlin {
+    kotlinOptions.freeCompilerArgs = ["-Xallow-result-return-type"]
+}
+
 protobuf {
     generatedFilesBaseDir = "$projectDir/src/generated"
     protoc {
