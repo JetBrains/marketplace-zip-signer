@@ -2,13 +2,14 @@ package org.jetbrains.zip.signer.digest
 
 import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
+import org.jetbrains.zip.signer.metadata.Digest
 
 object DigestUtils {
     fun computeDigest(
         digestAlgorithms: List<ContentDigestAlgorithm>,
         content: List<DataSource>,
         maximumChunkSize: Int = 1024 * 1024 // 1MB
-    ): Map<ContentDigestAlgorithm, ByteArray> {
+    ): List<Digest> {
         val chunkIterators = content.map {
             ChunkIterator(
                 it,
@@ -27,6 +28,6 @@ object DigestUtils {
                 digesters.forEach { it.consume(chunk) }
             }
         }
-        return digesters.associate { it.digestAlgorithm to it.getResult() }
+        return digesters.map { Digest(it.digestAlgorithm, it.getResult()) }
     }
 }

@@ -10,18 +10,14 @@ message ZipMetadataProto {
 }
 
 message ZipSignatureBlockProto {
-    repeated SignerBlockProto signers = 1;
+    repeated DigestProto digests = 1;
+    repeated SignerBlockProto signers = 2;
 }
 
 message SignerBlockProto {
-    DataToSignProto dataToSign = 1;
+    repeated bytes certificates = 1;
     repeated SignatureDataProto signatures = 2;
     bytes publicKey = 3;
-}
-
-message DataToSignProto {
-    repeated DigestProto digests = 1;
-    repeated bytes certificates = 2;
 }
 
 message DigestProto {

@@ -8,6 +8,7 @@ import org.jetbrains.zip.signer.digest.DigestUtils
 import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
 import org.jetbrains.zip.signer.exceptions.ZipVerificationException
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
+import org.jetbrains.zip.signer.metadata.Digest
 import org.jetbrains.zip.signer.metadata.SignerBlock
 import org.jetbrains.zip.signer.metadata.ZipMetadata
 import org.jetbrains.zip.signer.zip.ZipUtils
@@ -58,9 +59,11 @@ object ZipVerifier {
         eocd: DataSource
     ): VerificationResult {
         return try {
-            val contentDigestsToVerify = HashSet<ContentDigestAlgorithm>(1)
-            val signers = verify(zipMetadata, contentDigestsToVerify)
-            verifyIntegrity(beforeApkSigningBlock, centralDir, eocd, contentDigestsToVerify, zipMetadata)
+            val requiredContentDigests = zipMetadata.signers.map { signer ->
+                signer.signatures.map { it.algorithm.contentDigestAlgorithm }
+            }.flatten().toSet()
+            checkDigests(beforeApkSigningBlock, centralDir, eocd, requiredContentDigests, zipMetadata)
+            val signers = verify(zipMetadata)
             VerificationSuccess(signers)
         } catch (e: ZipVerificationException) {
             VerificationFail(e)
@@ -69,22 +72,18 @@ object ZipVerifier {
     }
 
     private fun verify(
-        zipMetadata: ZipMetadata,
-        contentDigestsToVerify: MutableSet<ContentDigestAlgorithm>
+        zipMetadata: ZipMetadata
     ): List<List<Certificate>> {
         val certFactory = CertificateFactory.getInstance("X.509")
-        return zipMetadata.signers.map {
-            verify(it, certFactory, contentDigestsToVerify)
-        }
+        val digests = zipMetadata.digests.associateBy { it.algorithm }
+        return zipMetadata.signers.map { verify(digests, it, certFactory) }
     }
 
     private fun verify(
+        digests: Map<ContentDigestAlgorithm, Digest>,
         signer: SignerBlock,
-        certFactory: CertificateFactory,
-        contentDigestsToVerify: MutableSet<ContentDigestAlgorithm>
+        certFactory: CertificateFactory
     ): List<Certificate> {
-        val signedData = signer.dataToSign
-
         val publicKeyBytes = signer.encodedPublicKey
 
         if (signer.signatures.isEmpty()) throw ZipVerificationException("Signer block contains no signatures")
@@ -92,6 +91,8 @@ object ZipVerifier {
         signer.signatures.forEach { signature ->
             val signatureAlgorithm = signature.algorithm
             val jcaSignatureAlgorithm = signatureAlgorithm.jcaSignatureAlgorithm
+            val digest = digests[signature.algorithm.contentDigestAlgorithm]
+                ?: throw RuntimeException("Missing digest ${signature.algorithm.contentDigestAlgorithm}")
 
             val keyAlgorithm = signatureAlgorithm.jcaKeyAlgorithm
             val publicKey = try {
@@ -104,12 +105,12 @@ object ZipVerifier {
             try {
                 val sig = Signature.getInstance(jcaSignatureAlgorithm)
                 sig.initVerify(publicKey)
-                sig.update(signedData.toByteArray())
+                sig.update(digest.digestBytes)
+                signer.encodedCertificates.forEach { sig.update(it) }
                 val sigBytes = signature.signatureBytes
                 if (!sig.verify(sigBytes)) {
                     throw ZipVerificationException("Signature over signed-data did not verify")
                 }
-                contentDigestsToVerify.add(signatureAlgorithm.contentDigestAlgorithm)
             } catch (e: InvalidKeyException) {
                 throw ZipVerificationException("Signature over signed-data did not verify")
             } catch (e: InvalidAlgorithmParameterException) {
@@ -119,7 +120,7 @@ object ZipVerifier {
             }
         }
 
-        val certificates = signedData.encodedCertificates.map {
+        val certificates = signer.encodedCertificates.map {
             certFactory.generateCertificate(it.inputStream()) as X509Certificate
         }
         if (certificates.isEmpty()) {
@@ -133,22 +134,17 @@ object ZipVerifier {
             throw ZipVerificationException("Public key mismatch between certificate and signature record")
         }
 
-        val digestAlgorithmsFromSignaturesRecord = signer.signatures.map { it.algorithm.contentDigestAlgorithm }
-        val digestAlgorithmsFromDigestsRecord = signer.dataToSign.digests.map { it.algorithm }
-        if (digestAlgorithmsFromSignaturesRecord != digestAlgorithmsFromDigestsRecord) {
-            throw ZipVerificationException("Signature algorithms mismatch between signatures and digests records")
-        }
         return certificates
     }
 
-    fun verifyIntegrity(
+    fun checkDigests(
         beforeApkSigningBlock: DataSource,
         centralDir: DataSource,
         eocd: DataSource,
-        contentDigestAlgorithms: Set<ContentDigestAlgorithm>,
+        requiredContentDigestAlgorithms: Set<ContentDigestAlgorithm>,
         zipMetadata: ZipMetadata
     ) {
-        if (contentDigestAlgorithms.isEmpty()) {
+        if (requiredContentDigestAlgorithms.isEmpty()) {
             throw ZipVerificationException("No content digests found")
         }
 
@@ -159,22 +155,18 @@ object ZipVerifier {
 
         val actualContentDigests = try {
             DigestUtils.computeDigest(
-                contentDigestAlgorithms.toList(),
+                requiredContentDigestAlgorithms.toList(),
                 listOf(beforeApkSigningBlock, centralDir, ByteBufferDataSource(modifiedEocd))
             )
         } catch (e: DigestException) {
             throw ZipVerificationException("Failed to compute content digests")
         }
 
-        if (contentDigestAlgorithms != actualContentDigests.keys) {
-            throw ZipVerificationException("Mismatch between sets of requested and computed content digests")
-        }
-
-        zipMetadata.signers.map { it.dataToSign.digests }.flatten().forEach { expected ->
-            val expectedDigest = expected.digestBytes
-            val actualDigest = actualContentDigests[expected.algorithm]
-            if (!Arrays.equals(expectedDigest, actualDigest)) {
-                throw ZipVerificationException("ZIP integrity check failed. ${expected.algorithm}s digest mismatch.")
+        actualContentDigests.forEach { digest ->
+            val expectedDigest = zipMetadata.digests.find { it.algorithm == digest.algorithm }
+                ?: throw ZipVerificationException("Missing ${digest.algorithm} digest in metadata")
+            if (!expectedDigest.digestBytes.contentEquals(digest.digestBytes)) {
+                throw ZipVerificationException("ZIP integrity check failed. ${digest.algorithm}s digest mismatch.")
             }
         }
     }

@@ -63,7 +63,7 @@ object ZipSigner {
             )
         )
 
-        val signingBlock = ZipMetadata.fromSignerBlocks(signerBlocks)
+        val signingBlock = ZipMetadata(contentDigests, signerBlocks)
 
         val eocdOffset = inputZipSections.centralDirectoryOffset + inputZipSections.centralDirectorySizeBytes
         val outputEocdRecord = inputDataSource.getByteBuffer(

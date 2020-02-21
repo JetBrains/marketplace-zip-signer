@@ -8,6 +8,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class ZipMetadata private constructor(
+    val digests: List<Digest>,
     val signers: List<SignerBlock>,
     private val protobufRepresentation: ZipMetadataProto
 ) {
@@ -58,29 +59,30 @@ class ZipMetadata private constructor(
                 )
             )
             assert(protobufContent.signatureSchemeVersion == 1)
-            return ZipMetadata(protobufContent.content.signersList.map {
-                SignerBlock(
-                    it
-                )
-            }, protobufContent)
-        }
 
-        fun fromSignerBlocks(signers: List<SignerBlock>): ZipMetadata {
             return ZipMetadata(
-                signers,
-                ZipMetadataProto
-                    .newBuilder()
-                    .setSignatureSchemeVersion(1)
-                    .setContent(
-                        ZipSignatureBlockProto
-                            .newBuilder()
-                            .addAllSigners(signers.map { it.protobufRepresentation })
-                            .build()
-                    )
-                    .build()
+                protobufContent.content.digestsList.map { Digest(it) },
+                protobufContent.content.signersList.map { SignerBlock(it) },
+                protobufContent
             )
         }
     }
+
+    constructor(digests: List<Digest>, signers: List<SignerBlock>) : this(
+        digests,
+        signers,
+        ZipMetadataProto
+            .newBuilder()
+            .setSignatureSchemeVersion(1)
+            .setContent(
+                ZipSignatureBlockProto
+                    .newBuilder()
+                    .addAllDigests(digests.map { it.protobufRepresentation })
+                    .addAllSigners(signers.map { it.protobufRepresentation })
+                    .build()
+            )
+            .build()
+    )
 
     val size = signatureBlockMetadataSize + protobufRepresentation.serializedSize
 
