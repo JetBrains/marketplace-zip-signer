@@ -1,4 +1,4 @@
-package org.jetbrains.zip.signer
+package org.jetbrains.zip.signer.signer
 
 import org.jetbrains.zip.signer.metadata.SignatureAlgorithm
 import java.security.InvalidKeyException

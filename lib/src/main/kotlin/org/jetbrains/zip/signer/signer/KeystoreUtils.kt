@@ -1,6 +1,5 @@
-package org.jetbrains.zip.signer.keys
+package org.jetbrains.zip.signer.signer
 
-import org.jetbrains.zip.signer.SignerInfo
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.cert.X509Certificate

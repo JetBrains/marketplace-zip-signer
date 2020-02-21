@@ -1,4 +1,4 @@
-package org.jetbrains.zip.signer.keys
+package org.jetbrains.zip.signer.signer
 
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.openssl.PEMEncryptedKeyPair

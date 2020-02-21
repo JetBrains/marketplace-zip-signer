@@ -1,4 +1,4 @@
-package org.jetbrains.zip.signer.keys
+package org.jetbrains.zip.signer.signer
 
 import org.jetbrains.zip.signer.BaseTest
 import org.junit.Assert
