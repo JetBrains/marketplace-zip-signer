@@ -1,11 +1,10 @@
-package org.jetbrains.zip.signer
+package org.jetbrains.zip.signer.signing
 
 import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.datasource.FileChannelDataSource
 import org.jetbrains.zip.signer.digest.DigestUtils
 import org.jetbrains.zip.signer.metadata.ZipMetadata
 import org.jetbrains.zip.signer.signer.SignerInfo
-import org.jetbrains.zip.signer.signing.generateSignerBlock
 import org.jetbrains.zip.signer.zip.ZipUtils
 import java.io.File
 import java.io.RandomAccessFile

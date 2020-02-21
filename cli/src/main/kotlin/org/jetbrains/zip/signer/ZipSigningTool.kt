@@ -3,6 +3,7 @@ package org.jetbrains.zip.signer
 import com.sampullara.cli.Args
 import com.sampullara.cli.Argument
 import org.jetbrains.zip.signer.signer.SignerInfoLoader
+import org.jetbrains.zip.signer.signing.ZipSigner
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import java.io.File
 import kotlin.system.exitProcess
