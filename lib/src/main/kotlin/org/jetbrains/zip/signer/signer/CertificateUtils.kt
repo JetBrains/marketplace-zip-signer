@@ -15,6 +15,7 @@ import org.bouncycastle.operator.bc.BcDSAContentSignerBuilder
 import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder
 import java.io.File
 import java.math.BigInteger
+import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.time.Duration
@@ -24,7 +25,7 @@ import java.time.ZoneOffset
 import java.util.*
 
 
-object X509CertificateUtils {
+object CertificateUtils {
     fun loadCertificatesFromFile(file: File): List<X509Certificate> {
         val certificateFactory = CertificateFactory.getInstance("X509")
         return certificateFactory.generateCertificates(file.inputStream().buffered()).map { it as X509Certificate }
@@ -57,5 +58,15 @@ object X509CertificateUtils {
                     keyPair.publicKeyInfo
                 ).build(contentSigner)
             )
+    }
+
+    fun isCertificateChainTrusted(certs: List<Certificate>, certificateAuthority: Certificate): Boolean {
+        if (certs[0] == certificateAuthority) return true
+        return try {
+            certs[0].verify(certificateAuthority.publicKey)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }

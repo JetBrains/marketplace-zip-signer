@@ -28,9 +28,9 @@ object SignerInfoLoader {
         SecurityUtils.addBouncyCastleProviderIfMissing()
         val keyPair = PrivateKeyUtils.loadKeyPair(privateKeyFile, privateKeyPassword)
         val certificates = when {
-            certificateFile != null -> X509CertificateUtils.loadCertificatesFromFile(certificateFile)
+            certificateFile != null -> CertificateUtils.loadCertificatesFromFile(certificateFile)
             else -> listOf(
-                X509CertificateUtils.generateDummyCertificate(keyPair)
+                CertificateUtils.generateDummyCertificate(keyPair)
             )
         }
         return SignerInfo(

@@ -2,6 +2,7 @@ package org.jetbrains.zip.signer
 
 import com.sampullara.cli.Args
 import com.sampullara.cli.Argument
+import org.jetbrains.zip.signer.signer.CertificateUtils
 import org.jetbrains.zip.signer.signer.SignerInfoLoader
 import org.jetbrains.zip.signer.signing.ZipSigner
 import org.jetbrains.zip.signer.verifier.ZipVerifier
@@ -61,7 +62,10 @@ object ZipSigningTool {
     private fun verify(params: Array<String>) {
         val options = VerifyOptions()
         Args.parseOrExit(options, params)
-        ZipVerifier.verify(File(options.inputFilePath))
+        val certificateAuthority = CertificateUtils
+            .loadCertificatesFromFile(File(options.certificateFile))
+            .first()
+        ZipVerifier.verify(File(options.inputFilePath), certificateAuthority)
     }
 }
 
@@ -91,6 +95,6 @@ class SigningOptions {
 class VerifyOptions {
     @set:Argument("in", required = true, description = "Path to signed plugin zip/jar file")
     var inputFilePath: String = ""
-    @set:Argument("print-certs", required = false, description = "Set this option to print zip certificates")
-    var printCertificates: Boolean = false
+    @set:Argument("cert", required = true, description = "Certificate file")
+    var certificateFile: String = ""
 }

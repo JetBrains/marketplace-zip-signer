@@ -5,12 +5,12 @@ import org.jetbrains.zip.signer.datasource.ByteBufferDataSource
 import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.datasource.FileChannelDataSource
 import org.jetbrains.zip.signer.digest.DigestUtils
-import org.jetbrains.zip.signer.exceptions.SigningBlockNotFoundException
 import org.jetbrains.zip.signer.exceptions.ZipVerificationException
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 import org.jetbrains.zip.signer.metadata.Digest
 import org.jetbrains.zip.signer.metadata.SignerBlock
 import org.jetbrains.zip.signer.metadata.ZipMetadata
+import org.jetbrains.zip.signer.signer.CertificateUtils
 import org.jetbrains.zip.signer.zip.ZipSections
 import org.jetbrains.zip.signer.zip.ZipUtils
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSectionsInformation
@@ -27,18 +27,35 @@ import java.util.*
 @ExperimentalUnsignedTypes
 object ZipVerifier {
     /**
-     * Verifies validity of signatures and returns certificates grouped by signer
+     * Verifies validity of signatures and digests and checks that
+     * certificates of at least one signer are signed with provided CA
      */
-    fun verify(file: File): VerificationResult {
+    fun verify(file: File, certificateAuthority: Certificate) {
+        val certificateChains = verify(file)
+        certificateChains.find { CertificateUtils.isCertificateChainTrusted(it, certificateAuthority) }
+            ?: throw ZipVerificationException("Zip archive was not signed with certificate signed by provided authority")
+    }
+
+    /**
+     * Verifies validity of signatures and digests and checks that
+     * public key of at least one signer is contained in provided list
+     */
+    fun verify(file: File, publicKeys: List<PublicKey>) {
+        val certificateChains = verify(file)
+        certificateChains.find { publicKeys.contains(it.first().publicKey) }
+            ?: throw ZipVerificationException("Zip archive was not signed with any of provided public keys")
+    }
+
+    private fun verify(file: File): List<List<Certificate>> {
         RandomAccessFile(file, "r").use {
             return verify(FileChannelDataSource(it.channel))
         }
     }
 
-    private fun verify(dataSource: DataSource): VerificationResult {
+    private fun verify(dataSource: DataSource): List<List<Certificate>> {
         val zipSectionsInformation = findZipSectionsInformation(dataSource)
         val zipMetadata = ZipMetadata.findInZip(dataSource, zipSectionsInformation)
-            ?: throw SigningBlockNotFoundException("Zip archive contains no valid signing block")
+            ?: throw ZipVerificationException("Zip archive contains no valid signing block")
         val zipSections = ZipUtils.findZipSections(dataSource, zipSectionsInformation, zipMetadata)
         return verify(zipSections, zipMetadata)
     }
@@ -46,15 +63,9 @@ object ZipVerifier {
     private fun verify(
         zipSections: ZipSections,
         zipMetadata: ZipMetadata
-    ): VerificationResult {
-        return try {
-            checkDigests(zipSections, zipMetadata)
-            val signers = verifySignatures(zipMetadata)
-            VerificationSuccess(signers)
-        } catch (e: ZipVerificationException) {
-            VerificationFail(e)
-        }
-
+    ): List<List<Certificate>> {
+        checkDigests(zipSections, zipMetadata)
+        return verifySignatures(zipMetadata)
     }
 
     private fun verifySignatures(
