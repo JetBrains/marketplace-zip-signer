@@ -3,7 +3,7 @@ package org.jetbrains.zip.signer.metadata
 import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.proto.ZipMetadataProto
 import org.jetbrains.zip.signer.proto.ZipSignatureBlockProto
-import org.jetbrains.zip.signer.zip.ZipSections
+import org.jetbrains.zip.signer.zip.ZipSectionsInformation
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -20,8 +20,8 @@ class ZipMetadata private constructor(
         private const val signatureBlockFooterSize = 24
         private const val signatureBlockMetadataSize = signatureBlockHeaderSize + signatureBlockFooterSize
 
-        fun findInZip(zipArchive: DataSource, zipSections: ZipSections): ZipMetadata? {
-            val centralDirStartOffset = zipSections.centralDirectoryOffset
+        fun findInZip(zipArchive: DataSource, zipSectionsInformation: ZipSectionsInformation): ZipMetadata? {
+            val centralDirStartOffset = zipSectionsInformation.centralDirectoryOffset
             if (centralDirStartOffset < signatureBlockMetadataSize) return null
 
             val footer = zipArchive

@@ -32,7 +32,7 @@ interface DataSource {
      * @throws IndexOutOfBoundsException if `offset` or `size` is negative, or if
      * `offset + size` is greater than [.size].
      */
-    fun feed(offset: Long, size: Long, writableByteChannel: WritableByteChannel)
+    fun feed(writableByteChannel: WritableByteChannel, offset: Long = 0, size: Long = size())
 
     /**
      * Returns a buffer holding the contents of the specified chunk of data from this data source.

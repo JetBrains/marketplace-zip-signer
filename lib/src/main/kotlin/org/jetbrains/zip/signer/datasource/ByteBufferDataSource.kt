@@ -24,7 +24,11 @@ class ByteBufferDataSource(private val buffer: ByteBuffer) :
         dest.put(getByteBuffer(offset, size))
     }
 
-    override fun feed(offset: Long, size: Long, writableByteChannel: WritableByteChannel) {
+    override fun feed(
+        writableByteChannel: WritableByteChannel,
+        offset: Long,
+        size: Long
+    ) {
         if (size < 0 || size > size) {
             throw IndexOutOfBoundsException("size: $size, source size: $size")
         }

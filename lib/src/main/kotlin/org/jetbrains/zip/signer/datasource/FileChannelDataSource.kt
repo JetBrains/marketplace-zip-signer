@@ -60,7 +60,11 @@ class FileChannelDataSource(
             )
     }
 
-    override fun feed(offset: Long, size: Long, writableByteChannel: WritableByteChannel) {
+    override fun feed(
+        writableByteChannel: WritableByteChannel,
+        offset: Long,
+        size: Long
+    ) {
         val sourceSize = size()
         checkChunkValid(
             offset,
@@ -70,7 +74,7 @@ class FileChannelDataSource(
         if (size == 0L) return
         var chunkOffsetInFile = this.offset + offset
         var remaining = size
-        val buf = ByteBuffer.allocateDirect(remaining.coerceAtMost(MAX_READ_CHUNK_SIZE.toLong()).toInt())
+        val buf = ByteBuffer.allocateDirect(remaining.toInt().coerceAtMost(MAX_READ_CHUNK_SIZE))
         while (remaining > 0) {
             val chunkSize = remaining.coerceAtMost(buf.capacity().toLong()).toInt()
             var chunkRemaining = chunkSize

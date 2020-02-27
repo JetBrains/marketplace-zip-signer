@@ -11,8 +11,9 @@ import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 import org.jetbrains.zip.signer.metadata.Digest
 import org.jetbrains.zip.signer.metadata.SignerBlock
 import org.jetbrains.zip.signer.metadata.ZipMetadata
+import org.jetbrains.zip.signer.zip.ZipSections
 import org.jetbrains.zip.signer.zip.ZipUtils
-import org.jetbrains.zip.signer.zip.ZipUtils.findZipSections
+import org.jetbrains.zip.signer.zip.ZipUtils.findZipSectionsInformation
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteOrder
@@ -35,35 +36,20 @@ object ZipVerifier {
     }
 
     private fun verify(dataSource: DataSource): VerificationResult {
-        val zipSections = findZipSections(dataSource)
-        val signingBlock = ZipMetadata.findInZip(dataSource, zipSections)
+        val zipSectionsInformation = findZipSectionsInformation(dataSource)
+        val zipMetadata = ZipMetadata.findInZip(dataSource, zipSectionsInformation)
             ?: throw SigningBlockNotFoundException("Zip archive contains no valid signing block")
-        val beforeApkSigningBlock = dataSource.slice(
-            0, zipSections.centralDirectoryOffset - signingBlock.size
-        )
-        val centralDir = dataSource.slice(
-            zipSections.centralDirectoryOffset,
-            zipSections.endOfCentralDirectoryOffset - zipSections.centralDirectoryOffset
-        )
-        val endOfCentralDirectory = dataSource.slice(
-            zipSections.endOfCentralDirectoryOffset,
-            zipSections.endOfCentralDirectorySizeBytes.toLong()
-        )
-        return verify(beforeApkSigningBlock, signingBlock, centralDir, endOfCentralDirectory)
+        val zipSections = ZipUtils.findZipSections(dataSource, zipSectionsInformation, zipMetadata)
+        return verify(zipSections, zipMetadata)
     }
 
     private fun verify(
-        beforeApkSigningBlock: DataSource,
-        zipMetadata: ZipMetadata,
-        centralDir: DataSource,
-        eocd: DataSource
+        zipSections: ZipSections,
+        zipMetadata: ZipMetadata
     ): VerificationResult {
         return try {
-            val requiredContentDigests = zipMetadata.signers.map { signer ->
-                signer.signatures.map { it.algorithm.contentDigestAlgorithm }
-            }.flatten().toSet()
-            checkDigests(beforeApkSigningBlock, centralDir, eocd, requiredContentDigests, zipMetadata)
-            val signers = verify(zipMetadata)
+            checkDigests(zipSections, zipMetadata)
+            val signers = verifySignatures(zipMetadata)
             VerificationSuccess(signers)
         } catch (e: ZipVerificationException) {
             VerificationFail(e)
@@ -71,15 +57,15 @@ object ZipVerifier {
 
     }
 
-    private fun verify(
+    private fun verifySignatures(
         zipMetadata: ZipMetadata
     ): List<List<Certificate>> {
         val certFactory = CertificateFactory.getInstance("X.509")
         val digests = zipMetadata.digests.associateBy { it.algorithm }
-        return zipMetadata.signers.map { verify(digests, it, certFactory) }
+        return zipMetadata.signers.map { verifySignatures(digests, it, certFactory) }
     }
 
-    private fun verify(
+    private fun verifySignatures(
         digests: Map<ContentDigestAlgorithm, Digest>,
         signer: SignerBlock,
         certFactory: CertificateFactory
@@ -92,7 +78,7 @@ object ZipVerifier {
             val signatureAlgorithm = signature.algorithm
             val jcaSignatureAlgorithm = signatureAlgorithm.jcaSignatureAlgorithm
             val digest = digests[signature.algorithm.contentDigestAlgorithm]
-                ?: throw RuntimeException("Missing digest ${signature.algorithm.contentDigestAlgorithm}")
+                ?: throw ZipVerificationException("Missing digest ${signature.algorithm.contentDigestAlgorithm}")
 
             val keyAlgorithm = signatureAlgorithm.jcaKeyAlgorithm
             val publicKey = try {
@@ -138,25 +124,24 @@ object ZipVerifier {
     }
 
     fun checkDigests(
-        beforeApkSigningBlock: DataSource,
-        centralDir: DataSource,
-        eocd: DataSource,
-        requiredContentDigestAlgorithms: Set<ContentDigestAlgorithm>,
+        zipSections: ZipSections,
         zipMetadata: ZipMetadata
     ) {
-        if (requiredContentDigestAlgorithms.isEmpty()) {
-            throw ZipVerificationException("No content digests found")
-        }
-
-        val modifiedEocd = eocd.getByteBuffer(0, eocd.size().toInt()).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-        }
-        ZipUtils.setZipEocdCentralDirectoryOffset(modifiedEocd, beforeApkSigningBlock.size().toUInt())
+        val modifiedEocd = zipSections.endOfCentralDirectorySection
+            .getByteBuffer(0, zipSections.endOfCentralDirectorySection.size().toInt())
+            .apply {
+                order(ByteOrder.LITTLE_ENDIAN)
+            }
+        ZipUtils.setZipEocdCentralDirectoryOffset(modifiedEocd, zipSections.beforeSigningBlockSection.size().toUInt())
 
         val actualContentDigests = try {
             DigestUtils.computeDigest(
-                requiredContentDigestAlgorithms.toList(),
-                listOf(beforeApkSigningBlock, centralDir, ByteBufferDataSource(modifiedEocd))
+                zipMetadata.digests.map { it.algorithm },
+                listOf(
+                    zipSections.beforeSigningBlockSection,
+                    zipSections.centralDirectorySection,
+                    ByteBufferDataSource(modifiedEocd)
+                )
             )
         } catch (e: DigestException) {
             throw ZipVerificationException("Failed to compute content digests")
@@ -164,7 +149,7 @@ object ZipVerifier {
 
         actualContentDigests.forEach { digest ->
             val expectedDigest = zipMetadata.digests.find { it.algorithm == digest.algorithm }
-                ?: throw ZipVerificationException("Missing ${digest.algorithm} digest in metadata")
+                ?: throw RuntimeException("Missing ${digest.algorithm} digest in metadata")
             if (!expectedDigest.digestBytes.contentEquals(digest.digestBytes)) {
                 throw ZipVerificationException("ZIP integrity check failed. ${digest.algorithm}s digest mismatch.")
             }

@@ -1,6 +1,7 @@
 package org.jetbrains.zip.signer.zip
 
 import org.jetbrains.zip.signer.datasource.DataSource
+import org.jetbrains.zip.signer.metadata.ZipMetadata
 import org.jetbrains.zip.signer.utils.getUnsignedInt
 import org.jetbrains.zip.signer.utils.getUnsignedShort
 import org.jetbrains.zip.signer.utils.isLittleEndian
@@ -18,7 +19,7 @@ object ZipUtils {
     private const val ZIP_EOCD_CENTRAL_DIR_OFFSET_FIELD_OFFSET = 16
     private const val ZIP_EOCD_COMMENT_LENGTH_FIELD_OFFSET = 20
 
-    fun findZipSections(zip: DataSource): ZipSections {
+    fun findZipSectionsInformation(zip: DataSource): ZipSectionsInformation {
         val (eocdOffset, eocd) = findEocdInBuffer(zip)
             ?: throw ZipException("ZIP End of Central Directory record not found")
         val centralDirectoryEndOffset = eocd.centralDirectoryOffset.toLong() + eocd.centralDirectorySize.toLong()
@@ -30,13 +31,24 @@ object ZipUtils {
             throw ZipException("ZIP Central Directory overlaps with End of Central Directory")
         }
 
-        return ZipSections(
+        return ZipSectionsInformation(
             eocd.centralDirectoryOffset.toLong(),
             eocd.centralDirectorySize.toLong(),
             eocdOffset,
             (zip.size() - eocdOffset).toInt()
         )
     }
+
+    fun findZipSections(
+        zip: DataSource, zipSectionsInformation: ZipSectionsInformation, zipMetadata: ZipMetadata?
+    ) = ZipSections(
+        zip.slice(0, zipSectionsInformation.centralDirectoryOffset - (zipMetadata?.size?.toLong() ?: 0)),
+        zip.slice(zipSectionsInformation.centralDirectoryOffset, zipSectionsInformation.centralDirectorySizeBytes),
+        zip.slice(
+            zipSectionsInformation.endOfCentralDirectoryOffset,
+            zipSectionsInformation.endOfCentralDirectorySizeBytes.toLong()
+        )
+    )
 
     /**
      * We are guessing that it's a zip archive without comment to read only 22 bytes of data.

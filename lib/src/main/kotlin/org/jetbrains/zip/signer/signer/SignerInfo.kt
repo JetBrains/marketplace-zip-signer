@@ -12,11 +12,12 @@ class SignerInfo(
     val privateKey: PrivateKey
 ) {
     val publicKey = certificates[0].publicKey
-    val suggestedSignatureAlgorithms = when (publicKey) {
+    val signatureAlgorithms = when (publicKey) {
         is RSAKey -> getSuggestedRsaAlgorithms(publicKey)
         is DSAKey -> getSuggestedDsaAlgorithms()
         else -> throw InvalidKeyException("Unsupported key algorithm: ${publicKey.algorithm}")
     }
+    val requiredDigests = signatureAlgorithms.map { it.contentDigestAlgorithm }
 
     private fun getSuggestedRsaAlgorithms(key: RSAKey) = when {
         key.modulus.bitLength() <= 3072 -> listOf(
