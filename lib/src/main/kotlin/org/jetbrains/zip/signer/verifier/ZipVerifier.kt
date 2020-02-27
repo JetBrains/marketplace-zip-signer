@@ -47,7 +47,7 @@ object ZipVerifier {
         )
         val endOfCentralDirectory = dataSource.slice(
             zipSections.endOfCentralDirectoryOffset,
-            zipSections.endOfCentralDirectorySizeBytes
+            zipSections.endOfCentralDirectorySizeBytes.toLong()
         )
         return verify(beforeApkSigningBlock, signingBlock, centralDir, endOfCentralDirectory)
     }

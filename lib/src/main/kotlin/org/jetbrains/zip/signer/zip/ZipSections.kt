@@ -4,5 +4,5 @@ class ZipSections(
     val centralDirectoryOffset: Long,
     val centralDirectorySizeBytes: Long,
     val endOfCentralDirectoryOffset: Long,
-    val endOfCentralDirectorySizeBytes: Long
+    val endOfCentralDirectorySizeBytes: Int
 )

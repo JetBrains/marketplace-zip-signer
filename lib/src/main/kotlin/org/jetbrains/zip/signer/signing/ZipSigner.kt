@@ -52,8 +52,8 @@ object ZipSigner {
                     inputZipSections.centralDirectorySizeBytes
                 ),
                 inputDataSource.slice(
-                    (inputZipSections.centralDirectoryOffset + inputZipSections.centralDirectorySizeBytes),
-                    inputDataSource.size() - (inputZipSections.centralDirectoryOffset + inputZipSections.centralDirectorySizeBytes)
+                    inputZipSections.endOfCentralDirectoryOffset,
+                    inputZipSections.endOfCentralDirectorySizeBytes.toLong()
                 )
             )
         )
@@ -64,11 +64,8 @@ object ZipSigner {
         )
 
         val signingBlock = ZipMetadata(contentDigests, signerBlocks)
-
-        val eocdOffset = inputZipSections.centralDirectoryOffset + inputZipSections.centralDirectorySizeBytes
         val outputEocdRecord = inputDataSource.getByteBuffer(
-            eocdOffset,
-            (inputDataSource.size() - eocdOffset).toInt()
+            inputZipSections.endOfCentralDirectoryOffset, inputZipSections.endOfCentralDirectorySizeBytes
         ).apply {
             order(ByteOrder.LITTLE_ENDIAN)
         }

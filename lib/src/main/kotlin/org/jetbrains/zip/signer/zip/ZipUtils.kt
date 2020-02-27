@@ -34,7 +34,7 @@ object ZipUtils {
             eocd.centralDirectoryOffset.toLong(),
             eocd.centralDirectorySize.toLong(),
             eocdOffset,
-            zip.size() - eocdOffset
+            (zip.size() - eocdOffset).toInt()
         )
     }
 
