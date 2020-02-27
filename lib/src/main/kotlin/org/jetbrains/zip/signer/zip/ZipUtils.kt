@@ -52,7 +52,7 @@ object ZipUtils {
 
     /**
      * We are guessing that it's a zip archive without comment to read only 22 bytes of data.
-     * If we are wrong we are parsing iterating over archive content from the end to the beginning to find EOCD
+     * If we are wrong we are iterating over archive content from the end to the beginning to find EOCD
      */
     private fun findEocdInBuffer(zip: DataSource) =
         findEocdInBuffer(zip, 0u) ?: findEocdInBuffer(zip, UShort.MAX_VALUE)
