@@ -33,12 +33,12 @@ object PublicKeyUtils {
     }
 
     private fun getSshDsaPublicKey(buffer: ByteBuffer): PublicKey {
-        val p = BigInteger(buffer.getLengthPrefixedArray())
-        val q = BigInteger(buffer.getLengthPrefixedArray())
-        val g = BigInteger(buffer.getLengthPrefixedArray())
-        val y = BigInteger(buffer.getLengthPrefixedArray())
+        val prime = BigInteger(buffer.getLengthPrefixedArray())
+        val subPrime = BigInteger(buffer.getLengthPrefixedArray())
+        val base = BigInteger(buffer.getLengthPrefixedArray())
+        val publicKey = BigInteger(buffer.getLengthPrefixedArray())
         return KeyFactory
             .getInstance("DSA")
-            .generatePublic(DSAPublicKeySpec(y, p, q, g))
+            .generatePublic(DSAPublicKeySpec(publicKey, prime, subPrime, base))
     }
 }
