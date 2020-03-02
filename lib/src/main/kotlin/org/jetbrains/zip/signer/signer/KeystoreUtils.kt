@@ -5,9 +5,9 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 
 object KeystoreUtils {
-    fun getKeyStore(keystoreType: String?, keystoreProviderName: String?): KeyStore {
-        val definedKeyStoreType = keystoreType
-            ?: KeyStore.getDefaultType()
+    @JvmOverloads
+    fun getKeyStore(keystoreType: String? = null, keystoreProviderName: String? = null): KeyStore {
+        val definedKeyStoreType = keystoreType ?: KeyStore.getDefaultType()
         return if (keystoreProviderName != null) {
             KeyStore.getInstance(definedKeyStoreType, keystoreProviderName)
         } else {
@@ -42,11 +42,9 @@ private fun KeyStore.getSingleKeyEntryAlias(): String? {
         .asSequence()
         .filter { isKeyEntry(it) }
         .forEach {
-            if (definedKeyAlias != null) {
-                throw IllegalArgumentException(
-                    "Keystore contains multiple key entries. " +
-                            "--ks-key-alias option must be used to specify which entry to use."
-                )
+            requireNotNull(definedKeyAlias) {
+                "Keystore contains multiple key entries. " +
+                        "--ks-key-alias option must be used to specify which entry to use."
             }
             definedKeyAlias = it
         }
