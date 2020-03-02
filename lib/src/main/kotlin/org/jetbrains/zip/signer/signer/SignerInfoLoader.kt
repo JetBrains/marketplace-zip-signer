@@ -30,13 +30,8 @@ object SignerInfoLoader {
         val keyPair = PrivateKeyUtils.loadKeyPair(privateKeyFile, privateKeyPassword)
         val certificates = when {
             certificateFile != null -> CertificateUtils.loadCertificatesFromFile(certificateFile)
-            else -> listOf(
-                CertificateUtils.generateDummyCertificate(keyPair)
-            )
+            else -> listOf(CertificateUtils.generateDummyCertificate(keyPair))
         }
-        return SignerInfo(
-            certificates,
-            JcaPEMKeyConverter().getPrivateKey(keyPair.privateKeyInfo)
-        )
+        return SignerInfo(certificates, JcaPEMKeyConverter().getPrivateKey(keyPair.privateKeyInfo))
     }
 }
