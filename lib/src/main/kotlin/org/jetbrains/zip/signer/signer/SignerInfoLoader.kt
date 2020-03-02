@@ -6,6 +6,7 @@ import java.io.File
 
 
 object SignerInfoLoader {
+    @JvmOverloads
     fun loadSignerInfoFromKeystore(
         file: File,
         password: CharArray,
