@@ -32,15 +32,17 @@ object ZipUtils {
         }
 
         return ZipSectionsInformation(
-            eocd.centralDirectoryOffset.toLong(),
-            eocd.centralDirectorySize.toLong(),
-            eocdOffset,
-            (zip.size() - eocdOffset).toInt()
+            centralDirectoryOffset = eocd.centralDirectoryOffset.toLong(),
+            centralDirectorySizeBytes = eocd.centralDirectorySize.toLong(),
+            endOfCentralDirectoryOffset = eocdOffset,
+            endOfCentralDirectorySizeBytes = (zip.size() - eocdOffset).toInt()
         )
     }
 
-    fun findZipSections(
-        zip: DataSource, zipSectionsInformation: ZipSectionsInformation, zipMetadata: ZipMetadata?
+    internal fun findZipSections(
+        zip: DataSource,
+        zipSectionsInformation: ZipSectionsInformation,
+        zipMetadata: ZipMetadata?
     ) = ZipSections(
         zip.slice(0, zipSectionsInformation.centralDirectoryOffset - (zipMetadata?.size?.toLong() ?: 0)),
         zip.slice(zipSectionsInformation.centralDirectoryOffset, zipSectionsInformation.centralDirectorySizeBytes),
@@ -49,6 +51,14 @@ object ZipUtils {
             zipSectionsInformation.endOfCentralDirectorySizeBytes.toLong()
         )
     )
+
+    internal fun setZipEocdCentralDirectoryOffset(zipEndOfCentralDirectory: ByteBuffer, offset: UInt) {
+        assert(zipEndOfCentralDirectory.isLittleEndian())
+        zipEndOfCentralDirectory.setUnsignedInt(
+            zipEndOfCentralDirectory.position() + ZIP_EOCD_CENTRAL_DIR_OFFSET_FIELD_OFFSET,
+            offset
+        )
+    }
 
     /**
      * We are guessing that it's a zip archive without comment to read only 22 bytes of data.
@@ -83,15 +93,6 @@ object ZipUtils {
         return null
     }
 
-    fun setZipEocdCentralDirectoryOffset(
-        zipEndOfCentralDirectory: ByteBuffer, offset: UInt
-    ) {
-        assert(zipEndOfCentralDirectory.isLittleEndian())
-        zipEndOfCentralDirectory.setUnsignedInt(
-            zipEndOfCentralDirectory.position() + ZIP_EOCD_CENTRAL_DIR_OFFSET_FIELD_OFFSET, offset
-        )
-    }
-
     private fun parseEOCD(eocdSection: ByteBuffer): ZipEocdData? {
         with(eocdSection) {
             assert(isLittleEndian())
@@ -104,7 +105,7 @@ object ZipUtils {
         }
     }
 
-    data class ZipEocdData(
+    private data class ZipEocdData(
         val centralDirectoryOffset: UInt,
         val centralDirectorySize: UInt,
         val commentLength: UShort
