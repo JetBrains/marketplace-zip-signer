@@ -16,23 +16,12 @@ object KeystoreUtils {
     }
 }
 
-fun KeyStore.getSignerInfo(
-    keyPassword: CharArray,
-    alias: String?
-): SignerInfo {
+fun KeyStore.getSignerInfo(keyPassword: CharArray, alias: String?): SignerInfo {
     val definedKeyAlias = alias ?: getSingleKeyEntryAlias()
-    if (!isKeyEntry(definedKeyAlias)) {
-        throw IllegalArgumentException(
-            "Keystore entry '$definedKeyAlias' does not contain a key"
-        )
-    }
+    require(isKeyEntry(definedKeyAlias)) { "Keystore entry '$definedKeyAlias' does not contain a key" }
     val key = getKey(definedKeyAlias, keyPassword) as PrivateKey
     val certificateChain = getCertificateChain(definedKeyAlias).map { it as X509Certificate }
-    if (certificateChain.isNullOrEmpty()) {
-        throw IllegalArgumentException(
-            "Keystore '$definedKeyAlias' does not contain certificates"
-        )
-    }
+    require(!certificateChain.isNullOrEmpty()) { "Keystore '$definedKeyAlias' does not contain certificates" }
     return SignerInfo(certificateChain, key)
 }
 
