@@ -25,10 +25,7 @@ class ZipMetadata private constructor(
             if (centralDirStartOffset < signatureBlockMetadataSize) return null
 
             val footer = zipArchive
-                .getByteBuffer(
-                    centralDirStartOffset - signatureBlockFooterSize,
-                    signatureBlockFooterSize
-                )
+                .getByteBuffer(centralDirStartOffset - signatureBlockFooterSize, signatureBlockFooterSize)
                 .apply {
                     order(ByteOrder.LITTLE_ENDIAN)
                 }
@@ -43,10 +40,7 @@ class ZipMetadata private constructor(
             val totalSize = (signatureBlockSizeInFooter + 8).toInt()
             val signingBlockOffset = centralDirStartOffset - totalSize
             if (signingBlockOffset < 0) return null
-            val signatureBlockHeader = zipArchive.getByteBuffer(
-                signingBlockOffset,
-                signatureBlockHeaderSize
-            ).apply {
+            val signatureBlockHeader = zipArchive.getByteBuffer(signingBlockOffset, signatureBlockHeaderSize).apply {
                 order(ByteOrder.LITTLE_ENDIAN)
             }
             val signatureBlockSizeInHeader = signatureBlockHeader.getLong(0)
@@ -55,7 +49,8 @@ class ZipMetadata private constructor(
 
             val protobufContent = ZipMetadataProto.parseFrom(
                 zipArchive.getByteBuffer(
-                    signingBlockOffset + signatureBlockHeaderSize, totalSize - signatureBlockMetadataSize
+                    signingBlockOffset + signatureBlockHeaderSize,
+                    totalSize - signatureBlockMetadataSize
                 )
             )
             assert(protobufContent.signatureSchemeVersion == 1)
