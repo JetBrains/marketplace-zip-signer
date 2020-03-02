@@ -16,46 +16,31 @@ import java.nio.channels.FileChannel
 
 @ExperimentalUnsignedTypes
 object ZipSigner {
-    fun sign(
-        inputFile: File,
-        outputFile: File,
-        signerInfo: SignerInfo
-    ) {
+    fun sign(inputFile: File, outputFile: File, signerInfo: SignerInfo) {
         RandomAccessFile(inputFile, "r").use { inputRandomAccessFile ->
             RandomAccessFile(outputFile, "rw").use { outputRandomAccessFile ->
                 outputRandomAccessFile.setLength(0)
-                sign(
-                    inputDataSource = FileChannelDataSource(
-                        inputRandomAccessFile.channel
-                    ),
-                    outputFileChannel = outputRandomAccessFile.channel,
-                    signerInfo = signerInfo
-                )
+                sign(FileChannelDataSource(inputRandomAccessFile.channel), outputRandomAccessFile.channel, signerInfo)
             }
         }
     }
 
-    private fun sign(
-        inputDataSource: DataSource,
-        outputFileChannel: FileChannel,
-        signerInfo: SignerInfo
-    ) {
+    private fun sign(inputDataSource: DataSource, outputFileChannel: FileChannel, signerInfo: SignerInfo) {
         val inputZipSectionsInformation = ZipUtils.findZipSectionsInformation(inputDataSource)
         val inputSigningBlock = ZipMetadata.findInZip(inputDataSource, inputZipSectionsInformation)
         val inputZipSections = ZipUtils.findZipSections(inputDataSource, inputZipSectionsInformation, inputSigningBlock)
 
         val outputDigests = getOutputDigests(inputSigningBlock, inputZipSections, signerInfo)
         val newSignerBlock = generateSignerBlock(
-            signerInfo.certificates, signerInfo.privateKey, signerInfo.signatureAlgorithms, outputDigests
+            certificates = signerInfo.certificates,
+            privateKey = signerInfo.privateKey,
+            signatureAlgorithms = signerInfo.signatureAlgorithms,
+            contentDigests = outputDigests
         )
         val outputSignerBlocks = (inputSigningBlock?.signers ?: emptyList()) + newSignerBlock
         val outputMetadata = ZipMetadata(outputDigests, outputSignerBlocks)
 
-        generateSignedZip(
-            inputZipSections,
-            outputMetadata,
-            outputFileChannel
-        )
+        generateSignedZip(inputZipSections, outputMetadata, outputFileChannel)
     }
 
     private fun getOutputDigests(
