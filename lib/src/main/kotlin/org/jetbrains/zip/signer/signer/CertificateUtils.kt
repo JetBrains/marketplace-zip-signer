@@ -61,9 +61,10 @@ object CertificateUtils {
     }
 
     fun isCertificateChainTrusted(certs: List<Certificate>, certificateAuthority: Certificate): Boolean {
-        if (certs[0] == certificateAuthority) return true
+        val firstCert = certs.first()
+        if (firstCert == certificateAuthority) return true
         return try {
-            certs[0].verify(certificateAuthority.publicKey)
+            firstCert.verify(certificateAuthority.publicKey)
             true
         } catch (e: Exception) {
             false
