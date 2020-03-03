@@ -15,9 +15,7 @@ class ChunkDigester(val digestAlgorithm: ContentDigestAlgorithm, private val chu
     private var position = 0
 
     fun consume(chunk: ByteBuffer) {
-        if (position >= chunkCount) {
-            throw IllegalStateException("Too many chunks provided")
-        }
+        if (position >= chunkCount) error("Too many chunks provided")
 
         val chunkPrefix = ByteArray(5).apply {
             set(0, chunkPrefix)
