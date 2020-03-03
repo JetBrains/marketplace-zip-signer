@@ -60,17 +60,12 @@ object ZipVerifier {
         return verify(zipSections, zipMetadata)
     }
 
-    private fun verify(
-        zipSections: ZipSections,
-        zipMetadata: ZipMetadata
-    ): List<List<Certificate>> {
+    private fun verify(zipSections: ZipSections, zipMetadata: ZipMetadata): List<List<Certificate>> {
         checkDigests(zipSections, zipMetadata)
         return verifySignatures(zipMetadata)
     }
 
-    private fun verifySignatures(
-        zipMetadata: ZipMetadata
-    ): List<List<Certificate>> {
+    private fun verifySignatures(zipMetadata: ZipMetadata): List<List<Certificate>> {
         val certFactory = CertificateFactory.getInstance("X.509")
         val digests = zipMetadata.digests.associateBy { it.algorithm }
         return zipMetadata.signers.map { verifySignatures(digests, it, certFactory) }
@@ -134,10 +129,7 @@ object ZipVerifier {
         return certificates
     }
 
-    fun checkDigests(
-        zipSections: ZipSections,
-        zipMetadata: ZipMetadata
-    ) {
+    fun checkDigests(zipSections: ZipSections, zipMetadata: ZipMetadata) {
         val modifiedEocd = zipSections.endOfCentralDirectorySection
             .getByteBuffer(0, zipSections.endOfCentralDirectorySection.size().toInt())
             .apply {
