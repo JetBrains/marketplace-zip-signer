@@ -22,8 +22,8 @@ import java.nio.channels.FileChannel
 import java.nio.channels.WritableByteChannel
 
 class FileChannelDataSource(
-    val channel: FileChannel,
-    val offset: Long = 0,
+    private val channel: FileChannel,
+    private val offset: Long = 0,
     val size: Long? = null
 ) : DataSource {
     companion object {
@@ -47,30 +47,14 @@ class FileChannelDataSource(
 
     override fun slice(offset: Long, size: Long): FileChannelDataSource {
         val sourceSize = size()
-        checkChunkValid(
-            offset,
-            size,
-            sourceSize
-        )
-        return if (offset == 0L && size == sourceSize) this else
-            FileChannelDataSource(
-                channel,
-                this.offset + offset,
-                size
-            )
+        checkChunkValid(offset, size, sourceSize)
+        return if (offset == 0L && size == sourceSize) this
+        else FileChannelDataSource(channel, this.offset + offset, size)
     }
 
-    override fun feed(
-        writableByteChannel: WritableByteChannel,
-        offset: Long,
-        size: Long
-    ) {
+    override fun feed(writableByteChannel: WritableByteChannel, offset: Long, size: Long) {
         val sourceSize = size()
-        checkChunkValid(
-            offset,
-            size,
-            sourceSize
-        )
+        checkChunkValid(offset, size, sourceSize)
         if (size == 0L) return
         var chunkOffsetInFile = this.offset + offset
         var remaining = size
@@ -95,11 +79,7 @@ class FileChannelDataSource(
 
     override fun copyTo(offset: Long, size: Int, dest: ByteBuffer) {
         val sourceSize = size()
-        checkChunkValid(
-            offset,
-            size.toLong(),
-            sourceSize
-        )
+        checkChunkValid(offset, size.toLong(), sourceSize)
         if (size == 0) return
         if (size > dest.remaining()) throw BufferOverflowException()
         var offsetInFile = this.offset + offset
