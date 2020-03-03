@@ -21,9 +21,7 @@ fun generateSignerBlock(
     val signatures = signatureAlgorithms.map { signatureAlgorithm ->
         val digest = contentDigests.find {
             it.algorithm == signatureAlgorithm.contentDigestAlgorithm
-        } ?: throw RuntimeException(
-            "${signatureAlgorithm.contentDigestAlgorithm} content digest not computed"
-        )
+        } ?: throw RuntimeException("${signatureAlgorithm.contentDigestAlgorithm} content digest not computed")
         SignatureData(
             signatureAlgorithm,
             generateSignatureOverData(
