@@ -16,6 +16,7 @@ import java.nio.channels.FileChannel
 
 @ExperimentalUnsignedTypes
 object ZipSigner {
+    @JvmStatic
     fun sign(inputFile: File, outputFile: File, signerInfo: SignerInfo) {
         RandomAccessFile(inputFile, "r").use { inputRandomAccessFile ->
             RandomAccessFile(outputFile, "rw").use { outputRandomAccessFile ->
