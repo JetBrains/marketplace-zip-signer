@@ -42,9 +42,7 @@ class ByteBufferDataSource(private val buffer: ByteBuffer) :
         if (size < 0 || size > size) {
             throw IndexOutOfBoundsException("size: $size, source size: $size")
         }
-        return ByteBufferDataSource(
-            getByteBuffer(offset, size.toInt())
-        )
+        return ByteBufferDataSource(getByteBuffer(offset, size.toInt()))
     }
 
     private fun checkChunkValid(offset: Long, size: Long) {
