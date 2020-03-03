@@ -16,7 +16,7 @@ fun generateSignerBlock(
     if (certificates.isEmpty()) {
         throw SignatureException("No certificates configured for signer")
     }
-    val publicKey = certificates[0].publicKey
+    val publicKey = certificates.first().publicKey
     val encodedCertificates = certificates.map { it.encoded }
     val signatures = signatureAlgorithms.map { signatureAlgorithm ->
         val digest = contentDigests.find {
