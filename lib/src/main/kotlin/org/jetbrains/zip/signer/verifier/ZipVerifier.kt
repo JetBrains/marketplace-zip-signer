@@ -30,6 +30,7 @@ object ZipVerifier {
      * Verifies validity of signatures and digests and checks that
      * certificates of at least one signer are signed with provided CA
      */
+    @JvmStatic
     fun verify(file: File, certificateAuthority: Certificate) {
         val certificateChains = verify(file)
         certificateChains.find { CertificateUtils.isCertificateChainTrusted(it, certificateAuthority) }
@@ -40,6 +41,7 @@ object ZipVerifier {
      * Verifies validity of signatures and digests and checks that
      * public key of at least one signer is contained in provided list
      */
+    @JvmStatic
     fun verify(file: File, publicKeys: List<PublicKey>) {
         val certificateChains = verify(file)
         certificateChains.find { publicKeys.contains(it.first().publicKey) }
