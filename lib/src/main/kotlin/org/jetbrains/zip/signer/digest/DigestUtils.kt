@@ -4,7 +4,7 @@ import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 import org.jetbrains.zip.signer.metadata.Digest
 
-object DigestUtils {
+internal object DigestUtils {
     fun computeDigest(
         digestAlgorithms: List<ContentDigestAlgorithm>,
         content: List<DataSource>,

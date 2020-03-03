@@ -5,7 +5,7 @@ import org.jetbrains.zip.signer.utils.setUnsignedInt32LittleEndian
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 
-class ChunkDigester(val digestAlgorithm: ContentDigestAlgorithm, private val chunkCount: Int) {
+internal class ChunkDigester(val digestAlgorithm: ContentDigestAlgorithm, private val chunkCount: Int) {
     private val chunkPrefix: Byte = 0x5a
     private val messageDigest = MessageDigest.getInstance(digestAlgorithm.jcaMessageDigestAlgorithm)
     private val digest = ByteArray(5 + chunkCount * digestAlgorithm.chunkDigestOutputSizeBytes).apply {

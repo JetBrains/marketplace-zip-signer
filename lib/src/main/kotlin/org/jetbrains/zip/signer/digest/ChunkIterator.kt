@@ -4,7 +4,7 @@ import org.jetbrains.zip.signer.datasource.DataSource
 import java.nio.ByteBuffer
 import java.util.*
 
-class ChunkIterator(
+internal class ChunkIterator(
     private val dataSource: DataSource,
     private val maximumChunkSize: Int = 1024 * 1024
 ) : Iterator<ByteBuffer> {
