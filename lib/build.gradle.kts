@@ -23,7 +23,7 @@ idea {
     }
 }
 
-project.version = System.getenv("PROJECT_VERSION") ?: "DEV"
+project.version = if (hasProperty("projectVersion")) findProperty("projectVersion").toString() else "DEV"
 
 java {
     withSourcesJar()
