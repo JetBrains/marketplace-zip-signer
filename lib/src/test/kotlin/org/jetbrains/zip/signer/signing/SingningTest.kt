@@ -2,8 +2,8 @@ package org.jetbrains.zip.signer.signing
 
 import org.hamcrest.CoreMatchers
 import org.jetbrains.zip.signer.BaseTest
-import org.jetbrains.zip.signer.utils.ZipUtils
 import org.jetbrains.zip.signer.exceptions.ZipVerificationException
+import org.jetbrains.zip.signer.utils.ZipUtils
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import org.junit.Rule
 import org.junit.Test
@@ -50,6 +50,25 @@ class SigningTest : BaseTest() {
             verifyZip(testFileContent)
             ZipVerifier.verify(this, getCACertificate().certificates.first())
         }
+    }
+
+    @Test
+    fun `sign with chain and verify with CA`() {
+        val testFileContent = testName.methodName
+        val signs = listOf(getChain())
+
+        createZipAndSign(testFileContent, signs).apply {
+            verifyZip(testFileContent)
+            ZipVerifier.verify(this, getCACertificate().certificates.first())
+        }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `try to sign with invalid chain`() {
+        val testFileContent = testName.methodName
+        val signs = listOf(getInvalidChain())
+
+        createZipAndSign(testFileContent, signs)
     }
 
     @Test

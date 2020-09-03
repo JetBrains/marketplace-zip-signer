@@ -73,6 +73,16 @@ open class BaseTest {
         "testpassword".toCharArray()
     )
 
+    fun getChain() = SignerInfoLoader.loadSignerInfoFromFiles(
+        getResourceFile("certificates/sub_cert.key"),
+        getResourceFile("certificates/chain.pem")
+    )
+
+    fun getInvalidChain() = SignerInfoLoader.loadSignerInfoFromFiles(
+        getResourceFile("certificates/sub_cert.key"),
+        getResourceFile("certificates/invalid_chain.pem")
+    )
+
     fun getCertificate() = SignerInfoLoader.loadSignerInfoFromFiles(
         getResourceFile("certificates/sub_cert.key"),
         getResourceFile("certificates/sub_cert.crt")
