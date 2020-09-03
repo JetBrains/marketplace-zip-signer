@@ -1,11 +1,12 @@
-import java.net.URI
-import com.google.protobuf.gradle.*
+import com.google.protobuf.gradle.protobuf
+import com.google.protobuf.gradle.protoc
 
 plugins {
     kotlin("jvm")
     id("com.google.protobuf") version "0.8.13"
     id("idea")
     id("maven-publish")
+    id("com.jfrog.bintray") version "1.8.5"
 }
 
 dependencies {
@@ -47,24 +48,34 @@ protobuf {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
+        create<MavenPublication>("zip-signer-maven") {
             groupId = "org.jetbrains.marketplace"
             artifactId = "zip-signer"
             version = project.version.toString()
             from(components["java"])
         }
     }
+}
 
-    repositories {
-        maven {
-            credentials {
-                username = System.getenv("PUBLISH_USER")
-                password = System.getenv("PUBLISH_PASSWORD")
+if (hasProperty("bintrayUser")) {
+    bintray {
+        user = project.findProperty("bintrayUser").toString()
+        key = project.findProperty("bintrayApiKey").toString()
+        publish = true
+        setPublications("zip-signer-maven")
+        pkg.apply {
+            userOrg = "jetbrains"
+            repo = "intellij-plugin-service"
+            name = "zip-signer"
+            setLicenses("Apache-2.0")
+            vcsUrl = "git"
+            version.apply {
+                name = project.version.toString()
             }
-            url = URI("https://packages.jetbrains.team/maven/marketplace-internal")
         }
     }
 }
+
 
 tasks {
     test {
