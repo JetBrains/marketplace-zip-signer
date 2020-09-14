@@ -19,3 +19,6 @@ to verify use [ZipVerifier](https://github.com/JetBrains/marketplace-zip-signer/
 
 If you want to sign/verify plugin from command line you can use [CLI tool](https://github.com/JetBrains/marketplace-zip-signer/tree/master/cli).
 List of available parameters can be found at [ZipSigningTool.SigningOptions](https://github.com/JetBrains/marketplace-zip-signer/blob/master/cli/src/main/kotlin/org/jetbrains/zip/signer/ZipSigningTool.kt)
+
+[jb:confluence-on-gh]: https://confluence.jetbrains.com/display/ALL/JetBrains+on+GitHub
+[jb:slack]: https://plugins.jetbrains.com/slack
