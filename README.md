@@ -1,5 +1,8 @@
 # Marketplace zip signer
 
+[![official JetBrains project](https://jb.gg/badges/official.svg)][jb:confluence-on-gh]
+[![Slack](https://img.shields.io/badge/Slack-%23intellij--platform-blue)][jb:slack]
+
 Main goal of marketplace zip signer is to sign and verify 
 JetBrains plugins, but it can be applied to any other zip archive. 
 General concept of used zip archive signature scheme is similar 
