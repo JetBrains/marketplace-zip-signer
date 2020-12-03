@@ -7,6 +7,7 @@ plugins {
     id("idea")
     id("maven-publish")
     id("com.jfrog.bintray") version "1.8.5"
+    id("com.github.johnrengelman.shadow") version "5.2.0"
 }
 
 dependencies {
@@ -54,6 +55,12 @@ publishing {
             version = project.version.toString()
             from(components["java"])
         }
+        create<MavenPublication>("zip-signer-maven-all") {
+            groupId = "org.jetbrains.marketplace"
+            artifactId = "zip-signer-all"
+            version = project.version.toString()
+            artifact(tasks["shadowJar"])
+        }
     }
 }
 
@@ -62,7 +69,7 @@ if (hasProperty("bintrayUser")) {
         user = project.findProperty("bintrayUser").toString()
         key = project.findProperty("bintrayApiKey").toString()
         publish = true
-        setPublications("zip-signer-maven")
+        setPublications("zip-signer-maven", "zip-signer-maven-all")
         pkg.apply {
             userOrg = "jetbrains"
             repo = "intellij-plugin-service"
@@ -93,4 +100,15 @@ tasks {
 
 task("clearTmpDir", type = Delete::class) {
     delete("${project.buildDir}/tmp")
+}
+
+tasks {
+    shadowJar {
+        archiveBaseName.set("zip-signer")
+        relocate("com.google.protobuf", "thirdparty.protobuf")
+        relocate("kotlin", "thirdparty.kotlin")
+        relocate("org.slf4j", "thirdparty.slf4j")
+        relocate("org.bouncycastle", "thirdparty.bouncycastle")
+        relocate("org.intellij", "thirdparty.intellij")
+    }
 }
