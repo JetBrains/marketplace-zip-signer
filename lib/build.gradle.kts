@@ -59,7 +59,7 @@ publishing {
             groupId = "org.jetbrains.marketplace"
             artifactId = "zip-signer-all"
             version = project.version.toString()
-            artifact(tasks["shadowJar"])
+            project.shadow.component(this)
         }
     }
 }
