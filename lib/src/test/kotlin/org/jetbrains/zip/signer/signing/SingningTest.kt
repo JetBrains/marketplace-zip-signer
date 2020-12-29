@@ -1,10 +1,10 @@
 package org.jetbrains.zip.signer.signing
 
-import org.hamcrest.CoreMatchers
 import org.jetbrains.zip.signer.BaseTest
-import org.jetbrains.zip.signer.exceptions.ZipVerificationException
 import org.jetbrains.zip.signer.utils.ZipUtils
+import org.jetbrains.zip.signer.verifier.SuccessfulVerificationResult
 import org.jetbrains.zip.signer.verifier.ZipVerifier
+import org.junit.Assert
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
@@ -24,20 +24,17 @@ class SigningTest : BaseTest() {
         val signs = listOf(getCertificate())
         createZipAndSign(testFileContent, signs).apply {
             verifyZip(testFileContent)
-            verifySigns(signs)
+            Assert.assertTrue(isSignedBy(signs))
         }
     }
 
     @Test
     fun `sign than verify with other key`() {
-        expectedFailure.expect(ZipVerificationException::class.java)
-        expectedFailure.expectMessage(CoreMatchers.containsString("Zip archive was not signed with any of provided public keys"))
-
         val testFileContent = testName.methodName
         val signs = listOf(getFromKey("rsa"))
         createZipAndSign(testFileContent, signs).apply {
             verifyZip(testFileContent)
-            verifySigns(listOf(getFromKey("dsa")))
+            Assert.assertFalse(isSignedBy(listOf(getFromKey("dsa"))))
         }
     }
 
@@ -48,7 +45,12 @@ class SigningTest : BaseTest() {
 
         createZipAndSign(testFileContent, signs).apply {
             verifyZip(testFileContent)
-            ZipVerifier.verify(this, getCACertificate().certificates.first())
+            when (val verificationResult = ZipVerifier.verify(this)) {
+                is SuccessfulVerificationResult -> Assert.assertTrue(
+                    verificationResult.isSignedBy(getCACertificate().certificates.first())
+                )
+                else -> throw AssertionError("Invalid zip signature")
+            }
         }
     }
 
@@ -59,7 +61,12 @@ class SigningTest : BaseTest() {
 
         createZipAndSign(testFileContent, signs).apply {
             verifyZip(testFileContent)
-            ZipVerifier.verify(this, getCACertificate().certificates.first())
+            when (val verificationResult = ZipVerifier.verify(this)) {
+                is SuccessfulVerificationResult -> Assert.assertTrue(
+                    verificationResult.isSignedBy(getCACertificate().certificates.first())
+                )
+                else -> throw AssertionError("Invalid zip signature")
+            }
         }
     }
 
@@ -84,21 +91,18 @@ class SigningTest : BaseTest() {
 
         createZipAndSign(testFileContent, signs).apply {
             verifyZip(testFileContent)
-            verifySigns(signs)
+            Assert.assertTrue(isSignedBy(signs))
         }
     }
 
     @Test
     fun `sign and modify than verify`() {
-        expectedFailure.expect(ZipVerificationException::class.java)
-        expectedFailure.expectMessage(CoreMatchers.containsString("ZIP integrity check failed. CHUNKED_SHA256s digest mismatch."))
-
         val testFileContent = testName.methodName
         val signs = listOf(getCertificate())
         createZipAndSign(testFileContent, signs).apply {
             ZipUtils.modifyZipFile(this)
             verifyZip(testFileContent)
-            verifySigns(signs)
+            Assert.assertFalse(isSignedBy(signs))
         }
     }
 }

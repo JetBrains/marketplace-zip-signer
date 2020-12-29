@@ -7,6 +7,9 @@ import org.jetbrains.zip.signer.signer.PublicKeyUtils
 import org.jetbrains.zip.signer.signer.SignerInfoLoader
 import org.jetbrains.zip.signer.signing.DefaultSignatureProvider
 import org.jetbrains.zip.signer.signing.ZipSigner
+import org.jetbrains.zip.signer.verifier.InvalidSignatureResult
+import org.jetbrains.zip.signer.verifier.MissingSignatureResult
+import org.jetbrains.zip.signer.verifier.SuccessfulVerificationResult
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import java.io.File
 import kotlin.system.exitProcess
@@ -70,7 +73,18 @@ object ZipSigningTool {
         val certificateAuthority = CertificateUtils
             .loadCertificatesFromFile(File(options.certificateFile))
             .first()
-        ZipVerifier.verify(File(options.inputFilePath), certificateAuthority)
+        when (val verificationResult = ZipVerifier.verify(File(options.inputFilePath))) {
+            is SuccessfulVerificationResult -> if (!verificationResult.isSignedBy(certificateAuthority)) {
+                exitWithError("Zip archive is not signed by provided certificate authority")
+            }
+            is MissingSignatureResult -> exitWithError("Provided zip archive is not signed")
+            is InvalidSignatureResult -> exitWithError("Signature of zip archive is invalid")
+        }
+    }
+
+    private fun exitWithError(message: String) {
+        System.err.println(message)
+        exitProcess(-1)
     }
 }
 

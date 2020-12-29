@@ -7,6 +7,7 @@ import org.jetbrains.zip.signer.signer.SignerInfoLoader
 import org.jetbrains.zip.signer.signing.DefaultSignatureProvider
 import org.jetbrains.zip.signer.signing.ZipSigner
 import org.jetbrains.zip.signer.utils.ZipUtils
+import org.jetbrains.zip.signer.verifier.SuccessfulVerificationResult
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import org.junit.Assert
 import java.io.BufferedReader
@@ -61,9 +62,14 @@ open class BaseTest {
         Assert.assertThat("File content was corrupted", fileContent, IsEqual.equalTo(testFileContent))
     }
 
-    fun File.verifySigns(signs: List<SignerInfo>) {
-        signs.forEach { signerInfo ->
-            ZipVerifier.verify(this, signerInfo.certificates.map { it.publicKey })
+    fun File.isSignedBy(signs: List<SignerInfo>): Boolean {
+        return when (val verificationResult = ZipVerifier.verify(this)) {
+            is SuccessfulVerificationResult -> {
+                signs.all { signerInfo ->
+                    verificationResult.isSignedBy(signerInfo.certificates.first())
+                }
+            }
+            else -> false
         }
     }
 

@@ -18,54 +18,35 @@ import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteOrder
 import java.security.DigestException
-import java.security.PublicKey
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
 @ExperimentalUnsignedTypes
 object ZipVerifier {
-    /**
-     * Verifies validity of signatures and digests and checks that
-     * certificates of at least one signer are signed with provided CA
-     */
-    @JvmStatic
-    fun verify(file: File, certificateAuthority: Certificate) {
-        val certificateChains = verify(file)
-        certificateChains.find { CertificateUtils.isCertificateChainTrusted(it, certificateAuthority) }
-            ?: throw ZipVerificationException("Zip archive was not signed with certificate signed by provided authority")
-    }
-
-    /**
-     * Verifies validity of signatures and digests and checks that
-     * public key of at least one signer is contained in provided list
-     */
-    @JvmStatic
-    fun verify(file: File, publicKeys: List<PublicKey>) {
-        val certificateChains = verify(file)
-        certificateChains.find { publicKeys.contains(it.first().publicKey) }
-            ?: throw ZipVerificationException("Zip archive was not signed with any of provided public keys")
-    }
-
-    private fun verify(file: File): List<List<Certificate>> {
+    fun verify(file: File): ZipVerificationResult {
         RandomAccessFile(file, "r").use {
             return verify(FileChannelDataSource(it.channel))
         }
     }
 
-    private fun verify(dataSource: DataSource): List<List<Certificate>> {
+    private fun verify(dataSource: DataSource): ZipVerificationResult {
         val zipSectionsInformation = findZipSectionsInformation(dataSource)
         val zipMetadata = ZipMetadata.findInZip(dataSource, zipSectionsInformation)
-            ?: throw ZipVerificationException("Zip archive contains no valid signing block")
+            ?: return MissingSignatureResult()
         val zipSections = ZipUtils.findZipSections(dataSource, zipSectionsInformation, zipMetadata)
         return verify(zipSections, zipMetadata)
     }
 
-    private fun verify(zipSections: ZipSections, zipMetadata: ZipMetadata): List<List<Certificate>> {
-        checkDigests(zipSections, zipMetadata)
-        val certificateChains = verifySignatures(zipMetadata)
-        verifyCertificateChains(certificateChains)
-        return certificateChains
+    private fun verify(zipSections: ZipSections, zipMetadata: ZipMetadata): ZipVerificationResult {
+        return try {
+            checkDigests(zipSections, zipMetadata)
+            val certificateChains = verifySignatures(zipMetadata)
+            verifyCertificateChains(certificateChains)
+            SuccessfulVerificationResult(certificateChains)
+        } catch (e: ZipVerificationException) {
+            InvalidSignatureResult(e.message)
+        }
     }
 
     private fun verifyCertificateChains(certificateChains: List<List<Certificate>>) {

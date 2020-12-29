@@ -1,3 +1,3 @@
 package org.jetbrains.zip.signer.exceptions
 
-class ZipVerificationException(message: String) : Exception(message)
+class ZipVerificationException(override val message: String) : Exception(message)
