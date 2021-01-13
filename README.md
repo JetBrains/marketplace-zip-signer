@@ -22,3 +22,17 @@ List of available parameters can be found at [ZipSigningTool.SigningOptions](htt
 
 [jb:confluence-on-gh]: https://confluence.jetbrains.com/display/ALL/JetBrains+on+GitHub
 [jb:slack]: https://plugins.jetbrains.com/slack
+
+## How to use
+
+Download the latest version from [maven repository](https://mvnrepository.com/artifact/org.jetbrains.marketplace/zip-signer).
+
+```kotlin
+repositories {
+  maven("https://dl.bintray.com/jetbrains/intellij-plugin-service")
+}
+
+dependencies {
+  implementation("org.jetbrains.marketplace:zip-signer:0.8")
+}
+```
