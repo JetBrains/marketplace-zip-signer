@@ -1,4 +1,3 @@
-import com.google.protobuf.gradle.protobuf
 import com.google.protobuf.gradle.protoc
 
 plugins {
@@ -50,14 +49,14 @@ protobuf {
 publishing {
     publications {
         create<MavenPublication>("zip-signer-maven") {
-            groupId = "org.jetbrains.marketplace"
-            artifactId = "zip-signer"
+            groupId = "org.jetbrains"
+            artifactId = "marketplace-zip-signer"
             version = project.version.toString()
             from(components["java"])
         }
         create<MavenPublication>("zip-signer-maven-all") {
-            groupId = "org.jetbrains.marketplace"
-            artifactId = "zip-signer-all"
+            groupId = "org.jetbrains"
+            artifactId = "marketplace-zip-signer-all"
             version = project.version.toString()
             project.shadow.component(this@create)
         }
