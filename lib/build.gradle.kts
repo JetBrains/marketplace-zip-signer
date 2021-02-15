@@ -1,8 +1,8 @@
-import com.google.protobuf.gradle.protoc
+import com.google.protobuf.gradle.*
 
 plugins {
     kotlin("jvm")
-    id("com.google.protobuf") version "0.8.13"
+    id("com.google.protobuf") version "0.8.15"
     id("idea")
     id("maven-publish")
     id("com.jfrog.bintray") version "1.8.5"
