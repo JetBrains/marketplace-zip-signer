@@ -11,6 +11,8 @@ enum class ContentDigestAlgorithm(
      */
     CHUNKED_SHA256("SHA-256", 256 / 8),
 
+    CHUNKED_SHA384("SHA-384", 384 / 8),
+
     /**
      * SHA2-512 over 1 MB chunks.
      */
@@ -19,6 +21,7 @@ enum class ContentDigestAlgorithm(
     companion object {
         fun fromProtobufEnum(protobufEnum: DigestProto.AlgorithmId) = when (protobufEnum) {
             DigestProto.AlgorithmId.SHA256 -> CHUNKED_SHA256
+            DigestProto.AlgorithmId.SHA384 -> CHUNKED_SHA384
             DigestProto.AlgorithmId.SHA512 -> CHUNKED_SHA512
             DigestProto.AlgorithmId.UNRECOGNIZED -> throw IllegalArgumentException("Unsupported digest algorithm")
         }
@@ -26,6 +29,7 @@ enum class ContentDigestAlgorithm(
 
     fun toProtobufEnum() = when (this) {
         CHUNKED_SHA256 -> DigestProto.AlgorithmId.SHA256
+        CHUNKED_SHA384 -> DigestProto.AlgorithmId.SHA384
         CHUNKED_SHA512 -> DigestProto.AlgorithmId.SHA512
     }
 }

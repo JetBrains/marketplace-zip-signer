@@ -8,6 +8,11 @@ enum class SignatureAlgorithm(
     val jcaKeyAlgorithm: String,
     val jcaSignatureAlgorithm: String
 ) {
+    ECDSA_WITH_SHA384(
+        ContentDigestAlgorithm.CHUNKED_SHA384,
+        "ECDSA",
+        "SHA384withECDSA"
+    ),
     RSA_PKCS1_V1_5_WITH_SHA256(
         ContentDigestAlgorithm.CHUNKED_SHA256,
         "RSA",
@@ -26,6 +31,7 @@ enum class SignatureAlgorithm(
 
     companion object {
         fun fromProtobufEnum(protobufAlgorithmId: SignatureDataProto.AlgorithmId) = when (protobufAlgorithmId) {
+            SignatureDataProto.AlgorithmId.ECDSA_WITH_SHA384 -> ECDSA_WITH_SHA384
             SignatureDataProto.AlgorithmId.RSA_WITH_SHA256 -> RSA_PKCS1_V1_5_WITH_SHA256
             SignatureDataProto.AlgorithmId.RSA_WITH_SHA512 -> RSA_PKCS1_V1_5_WITH_SHA512
             SignatureDataProto.AlgorithmId.DSA_WITH_SHA256 -> DSA_WITH_SHA256
@@ -34,6 +40,7 @@ enum class SignatureAlgorithm(
     }
 
     fun toProtobufEnum() = when (this) {
+        ECDSA_WITH_SHA384 -> SignatureDataProto.AlgorithmId.ECDSA_WITH_SHA384
         RSA_PKCS1_V1_5_WITH_SHA256 -> SignatureDataProto.AlgorithmId.RSA_WITH_SHA256
         RSA_PKCS1_V1_5_WITH_SHA512 -> SignatureDataProto.AlgorithmId.RSA_WITH_SHA512
         DSA_WITH_SHA256 -> SignatureDataProto.AlgorithmId.DSA_WITH_SHA256

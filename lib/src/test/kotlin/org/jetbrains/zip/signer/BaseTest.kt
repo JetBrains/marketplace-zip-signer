@@ -94,6 +94,11 @@ open class BaseTest {
         getResourceFile("certificates/sub_cert.crt")
     )
 
+    fun getECDSACertificate() = SignerInfoLoader.loadSignerInfoFromFiles(
+        getResourceFile("certificates/ec_key.pem"),
+        getResourceFile("certificates/ecdsa_cert.pem")
+    )
+
     fun getCertificateWithPassword() = SignerInfoLoader.loadSignerInfoFromFiles(
         getResourceFile("certificates/sub_cert.key"),
         getResourceFile("certificates/sub_cert_password.crt"),

@@ -9,6 +9,7 @@ import java.security.InvalidKeyException
 import java.security.KeyFactory
 import java.security.PublicKey
 import java.security.interfaces.DSAKey
+import java.security.interfaces.ECKey
 import java.security.interfaces.RSAKey
 import java.security.spec.DSAPublicKeySpec
 import java.security.spec.RSAPublicKeySpec
@@ -36,6 +37,7 @@ object PublicKeyUtils {
 
     fun getSuggestedSignatureAlgorithm(publicKey: PublicKey) = when (publicKey) {
         is RSAKey -> getSuggestedRsaAlgorithm(publicKey)
+        is ECKey -> SignatureAlgorithm.ECDSA_WITH_SHA384
         is DSAKey -> SignatureAlgorithm.DSA_WITH_SHA256
         else -> throw InvalidKeyException("Unsupported key algorithm: ${publicKey.algorithm}")
     }

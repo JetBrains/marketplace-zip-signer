@@ -29,6 +29,16 @@ class SigningTest : BaseTest() {
     }
 
     @Test
+    fun `sign than verify ecdsa`() {
+        val testFileContent = testName.methodName
+        val signs = listOf(getECDSACertificate())
+        createZipAndSign(testFileContent, signs).apply {
+            verifyZip(testFileContent)
+            Assert.assertTrue(isSignedBy(signs))
+        }
+    }
+
+    @Test
     fun `sign than verify with other key`() {
         val testFileContent = testName.methodName
         val signs = listOf(getFromKey("rsa"))

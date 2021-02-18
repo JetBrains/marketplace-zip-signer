@@ -23,6 +23,7 @@ message DigestProto {
     AlgorithmId algorithmId = 1;
     enum AlgorithmId {
         SHA256 = 0;
+        SHA384 = 2;
         SHA512 = 1;
     }
     bytes digestBytes = 2;
@@ -34,6 +35,7 @@ message SignatureDataProto {
         RSA_WITH_SHA256 = 0;
         RSA_WITH_SHA512 = 2;
         DSA_WITH_SHA256 = 3;
+        ECDSA_WITH_SHA384 = 4;
     }
     bytes signatureBytes = 2;
 }
