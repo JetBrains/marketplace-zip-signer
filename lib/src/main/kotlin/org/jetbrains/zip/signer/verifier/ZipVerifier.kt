@@ -33,7 +33,7 @@ object ZipVerifier {
     private fun verify(dataSource: DataSource): ZipVerificationResult {
         val zipSectionsInformation = findZipSectionsInformation(dataSource)
         val zipMetadata = ZipMetadata.findInZip(dataSource, zipSectionsInformation)
-            ?: return MissingSignatureResult()
+            ?: return MissingSignatureResult
         val zipSections = ZipUtils.findZipSections(dataSource, zipSectionsInformation, zipMetadata)
         return verify(zipSections, zipMetadata)
     }
@@ -55,7 +55,7 @@ object ZipVerifier {
         }
     }
 
-    private fun verifySignatures(zipMetadata: ZipMetadata): List<List<Certificate>> {
+    private fun verifySignatures(zipMetadata: ZipMetadata): List<List<X509Certificate>> {
         val certFactory = CertificateFactory.getInstance("X.509")
         val digests = zipMetadata.digests.associateBy { it.algorithm }
         return zipMetadata.signers.map { verifySignatures(digests, it, certFactory) }
@@ -65,7 +65,7 @@ object ZipVerifier {
         digests: Map<ContentDigestAlgorithm, Digest>,
         signer: SignerBlock,
         certFactory: CertificateFactory
-    ): List<Certificate> {
+    ): List<X509Certificate> {
         if (signer.signatures.isEmpty()) throw ZipVerificationException("Signer block contains no signatures")
 
         val certificates = signer.encodedCertificates.map {

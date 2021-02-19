@@ -1,16 +1,19 @@
 package org.jetbrains.zip.signer.verifier
 
-import org.jetbrains.zip.signer.signer.CertificateUtils
-import java.security.cert.Certificate
+import java.security.cert.X509Certificate
 
 sealed class ZipVerificationResult
 
-class SuccessfulVerificationResult(val certificateChains: List<List<Certificate>>) : ZipVerificationResult() {
-    fun isSignedBy(certificateAuthority: Certificate): Boolean {
-        return certificateChains.any { CertificateUtils.isCertificateChainTrusted(it, certificateAuthority) }
+class SuccessfulVerificationResult(val certificateChains: List<List<X509Certificate>>) : ZipVerificationResult() {
+    fun isSignedBy(certificateAuthority: X509Certificate): Boolean {
+        return findCertificateChain(certificateAuthority) != null
+    }
+
+    fun findCertificateChain(certificateAuthority: X509Certificate): List<X509Certificate>? {
+        return certificateChains.find { it.last() == certificateAuthority }
     }
 }
 
-class MissingSignatureResult : ZipVerificationResult()
+object MissingSignatureResult : ZipVerificationResult()
 
 class InvalidSignatureResult(val errorMessage: String) : ZipVerificationResult()

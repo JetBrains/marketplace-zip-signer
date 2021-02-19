@@ -1,11 +1,10 @@
 package org.jetbrains.zip.signer
 
 import org.hamcrest.core.IsEqual
-import org.jetbrains.zip.signer.signer.PublicKeyUtils
-import org.jetbrains.zip.signer.signer.SignerInfo
-import org.jetbrains.zip.signer.signer.SignerInfoLoader
+import org.jetbrains.zip.signer.signer.*
 import org.jetbrains.zip.signer.signing.DefaultSignatureProvider
 import org.jetbrains.zip.signer.signing.ZipSigner
+import org.jetbrains.zip.signer.utils.CertificateChain
 import org.jetbrains.zip.signer.utils.ZipUtils
 import org.jetbrains.zip.signer.verifier.SuccessfulVerificationResult
 import org.jetbrains.zip.signer.verifier.ZipVerifier
@@ -13,6 +12,8 @@ import org.junit.Assert
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
+import java.security.cert.X509CRL
+import java.security.cert.X509Certificate
 import java.util.*
 
 
@@ -22,7 +23,7 @@ open class BaseTest {
         private const val ENTRY_NAME: String = "test.txt"
     }
 
-    private fun getResourceFile(resourceFilePath: String) = File(
+    fun getResourceFile(resourceFilePath: String) = File(
         javaClass.classLoader.getResource(resourceFilePath).file
     )
 
@@ -50,6 +51,17 @@ open class BaseTest {
         return outputFile
     }
 
+    fun createZipAndSignWithChain(testFileContent: String, chain: CertificateChain): File {
+        val uuid = UUID.randomUUID().toString()
+        val inputZip = ZipUtils.generateZipFile("$tmpDirectory/$uuid.zip", ENTRY_NAME, testFileContent)
+        val outputFile = File("$tmpDirectory/$uuid-output.zip")
+        ZipSigner.sign(inputZip, outputFile, chain.signsChain, DefaultSignatureProvider(
+            PublicKeyUtils.getSuggestedSignatureAlgorithm(chain.signCertificate.publicKey), chain.privateKey
+        ))
+
+        return outputFile
+    }
+
     fun File.verifyZip(testFileContent: String) {
         Assert.assertTrue("Output zip archive is empty", this.length() != 0.toLong())
 
@@ -66,8 +78,24 @@ open class BaseTest {
         return when (val verificationResult = ZipVerifier.verify(this)) {
             is SuccessfulVerificationResult -> {
                 signs.all { signerInfo ->
-                    verificationResult.isSignedBy(signerInfo.certificates.first())
+                    verificationResult.isSignedBy(signerInfo.certificates.last())
                 }
+            }
+            else -> false
+        }
+    }
+
+    fun File.isSignedBy(certificateAuthority: X509Certificate, revocationLists: List<X509CRL>? = null): Boolean {
+        return when (val result = ZipVerifier.verify(this)) {
+            is SuccessfulVerificationResult -> {
+                val chain = result.findCertificateChain(certificateAuthority)!!
+
+                val isSigned = result.isSignedBy(certificateAuthority)
+                val isNotRevoked = revocationLists?.let {
+                    CertificateUtils.findRevokedCertificate(chain, it) == null
+                } ?: true
+
+                isSigned && isNotRevoked
             }
             else -> false
         }
