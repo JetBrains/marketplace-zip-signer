@@ -25,14 +25,14 @@ List of available parameters can be found at [ZipSigningTool.SigningOptions](htt
 
 ## How to use
 
-Download the latest version from [maven repository](https://mvnrepository.com/artifact/org.jetbrains.marketplace/zip-signer).
+Download the latest version from [maven repository](https://mvnrepository.com/artifact/org.jetbrains/marketplace-zip-signer).
 
 ```kotlin
 repositories {
-  maven("https://dl.bintray.com/jetbrains/intellij-plugin-service")
+  mavenCentral()
 }
 
 dependencies {
-  implementation("org.jetbrains.marketplace:zip-signer:0.8")
+  implementation("org.jetbrains:marketplace-zip-signer:0.1")
 }
 ```
