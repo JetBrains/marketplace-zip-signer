@@ -5,6 +5,7 @@ plugins {
     id("com.google.protobuf") version "0.8.15"
     id("idea")
     id("maven-publish")
+    id("signing")
     id("com.jfrog.bintray") version "1.8.5"
     id("com.github.johnrengelman.shadow") version "5.2.0"
 }
@@ -46,19 +47,61 @@ protobuf {
     generatedFilesBaseDir = "$projectDir/src/generated"
 }
 
+signing {
+    val signingKey = findProperty("signingKey").toString()
+    val signingPassword = findProperty("signingPassword").toString()
+
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign(configurations.archives.get())
+}
+
 publishing {
     publications {
+        fun MavenPublication.configurePom() {
+            pom {
+                name.set("JetBrains Marketplace ZIP Signer")
+                description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
+                url.set("https://github.com/JetBrains/marketplace-zip-signer")
+                licenses {
+                    license {
+                        name.set("The Apache Software License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("satamas")
+                        name.set("Semyon Atamas")
+                        organization.set("JetBrains")
+                    }
+                }
+            }
+        }
+
         create<MavenPublication>("zip-signer-maven") {
             groupId = "org.jetbrains"
             artifactId = "marketplace-zip-signer"
             version = project.version.toString()
             from(components["java"])
+            configurePom()
         }
         create<MavenPublication>("zip-signer-maven-all") {
             groupId = "org.jetbrains"
             artifactId = "marketplace-zip-signer-all"
             version = project.version.toString()
             project.shadow.component(this@create)
+            configurePom()
+        }
+    }
+
+    repositories {
+        maven {
+            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
+
+            credentials {
+                username = findProperty("mavenCentralUsername").toString()
+                password = findProperty("mavenCentralPassword").toString()
+            }
         }
     }
 }
