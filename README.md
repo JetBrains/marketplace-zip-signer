@@ -33,6 +33,6 @@ repositories {
 }
 
 dependencies {
-  implementation("org.jetbrains:marketplace-zip-signer:0.1")
+  implementation("org.jetbrains:marketplace-zip-signer:0.1.0")
 }
 ```
