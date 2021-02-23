@@ -6,7 +6,6 @@ plugins {
     id("idea")
     id("maven-publish")
     id("signing")
-    id("com.jfrog.bintray") version "1.8.5"
     id("com.github.johnrengelman.shadow") version "5.2.0"
 }
 
@@ -113,25 +112,6 @@ signing {
     useInMemoryPgpKeys(signingKey, signingPassword)
     sign(publishing.publications["zip-signer-maven"])
     sign(publishing.publications["zip-signer-maven-all"])
-}
-
-if (hasProperty("bintrayUser")) {
-    bintray {
-        user = project.findProperty("bintrayUser").toString()
-        key = project.findProperty("bintrayApiKey").toString()
-        publish = true
-        setPublications("zip-signer-maven", "zip-signer-maven-all")
-        pkg.apply {
-            userOrg = "jetbrains"
-            repo = "intellij-plugin-service"
-            name = "zip-signer"
-            setLicenses("Apache-2.0")
-            vcsUrl = "git"
-            version.apply {
-                name = project.version.toString()
-            }
-        }
-    }
 }
 
 
