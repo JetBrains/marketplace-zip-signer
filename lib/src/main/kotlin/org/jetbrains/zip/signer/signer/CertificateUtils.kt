@@ -36,6 +36,7 @@ object CertificateUtils {
         LocalDate.of(9999, 12, 31).atStartOfDay().toInstant(ZoneOffset.UTC)
     )
 
+    @JvmStatic
     fun loadCertificatesFromFile(file: File): List<X509Certificate> {
         val certificateFactory = CertificateFactory.getInstance("X509")
         return certificateFactory.generateCertificates(file.inputStream().buffered()).map { it as X509Certificate }
@@ -73,6 +74,8 @@ object CertificateUtils {
         return certs.zipWithNext().all { it.first.isSignedBy(it.second) }
     }
 
+    @Suppress("unused")
+    @JvmStatic
     fun getRevocationLists(certs: List<X509Certificate>): List<X509CRL> {
         val certsExceptCA = certs.subList(0, certs.size - 1)
         return certsExceptCA.map { certificate ->
@@ -85,6 +88,7 @@ object CertificateUtils {
         }
     }
 
+    @JvmStatic
     fun getCrlUris(certificate: X509Certificate): List<URI> {
         val crlDistributionPointsBytes = certificate.getExtensionValue(Extension.cRLDistributionPoints.id)
         val derOctetString = ASN1InputStream(ByteArrayInputStream(crlDistributionPointsBytes)).use {
@@ -109,6 +113,7 @@ object CertificateUtils {
         return crlUris
     }
 
+    @JvmStatic
     fun findRevokedCertificate(
         certs: List<X509Certificate>,
         revocationLists: List<X509CRL>
