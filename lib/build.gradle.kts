@@ -105,8 +105,10 @@ publishing {
 }
 
 signing {
-    val signingKey = findProperty("signingKey").toString()
-    val signingPassword = findProperty("signingPassword").toString()
+    isRequired = project.version != "DEV"
+
+    val signingKey = findProperty("signingKey")?.toString()
+    val signingPassword = findProperty("signingPassword")?.toString()
 
     useInMemoryPgpKeys(signingKey, signingPassword)
     sign(publishing.publications["zip-signer-maven"])
