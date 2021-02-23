@@ -53,7 +53,7 @@ publishing {
         fun MavenPublication.configurePom() {
             pom {
                 name.set("JetBrains Marketplace ZIP Signer")
-                description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
+                description.set("The main goal of the JetBrains Marketplace ZIP Signer is to sign and verify JetBrains plugins, but it can be applied to any other ZIP archive. The general concept of the used ZIP archive signature scheme is similar to APK Signature Scheme V2.")
                 url.set("https://github.com/JetBrains/marketplace-zip-signer")
                 licenses {
                     license {
