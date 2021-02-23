@@ -6,13 +6,28 @@ import org.bouncycastle.openssl.PEMEncryptedKeyPair
 import org.bouncycastle.openssl.PEMKeyPair
 import org.bouncycastle.openssl.PEMParser
 import org.bouncycastle.openssl.PasswordException
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.bouncycastle.openssl.jcajce.JceOpenSSLPKCS8DecryptorProviderBuilder
 import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder
 import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo
 import java.io.File
+import java.security.PrivateKey
 
 
-internal object PrivateKeyUtils {
+object PrivateKeyUtils {
+    /**
+     * Utility function that can be used to load private key from file.
+     * @param file PEM file with private key
+     * @param password password required to decrypt private key
+     * @return private key loaded from file
+     */
+    @Suppress("unused")
+    @JvmStatic
+    fun loadPrivateKey(file: File, password: CharArray?): PrivateKey {
+        val keyPair = loadKeyPair(file, password)
+        return JcaPEMKeyConverter().getPrivateKey(keyPair.privateKeyInfo)
+    }
+
     /**
      * @param file PEM file with private key
      * @return PEM key pair. Public key can be null if private key file contains only private key
