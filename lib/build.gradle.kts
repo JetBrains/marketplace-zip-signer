@@ -28,6 +28,7 @@ project.version = if (hasProperty("projectVersion")) findProperty("projectVersio
 
 java {
     withSourcesJar()
+    withJavadocJar()
 
     sourceCompatibility = JavaVersion.VERSION_1_7
     targetCompatibility = JavaVersion.VERSION_1_7
@@ -45,14 +46,6 @@ protobuf {
         artifact = "com.google.protobuf:protoc:3.11.4"
     }
     generatedFilesBaseDir = "$projectDir/src/generated"
-}
-
-signing {
-    val signingKey = findProperty("signingKey").toString()
-    val signingPassword = findProperty("signingPassword").toString()
-
-    useInMemoryPgpKeys(signingKey, signingPassword)
-    sign(configurations.archives.get())
 }
 
 publishing {
@@ -74,6 +67,11 @@ publishing {
                         name.set("Semyon Atamas")
                         organization.set("JetBrains")
                     }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com/JetBrains/marketplace-zip-signer.git")
+                    developerConnection.set("scm:git:ssh://github.com/JetBrains/marketplace-zip-signer.git")
+                    url.set("https://github.com/JetBrains/marketplace-zip-signer")
                 }
             }
         }
@@ -104,6 +102,15 @@ publishing {
             }
         }
     }
+}
+
+signing {
+    val signingKey = findProperty("signingKey").toString()
+    val signingPassword = findProperty("signingPassword").toString()
+
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign(publishing.publications["zip-signer-maven"])
+    sign(publishing.publications["zip-signer-maven-all"])
 }
 
 if (hasProperty("bintrayUser")) {
