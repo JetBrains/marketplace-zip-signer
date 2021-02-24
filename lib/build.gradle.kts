@@ -12,7 +12,6 @@ plugins {
 dependencies {
     implementation("org.bouncycastle:bcpkix-jdk15on:1.64")
     implementation("com.google.protobuf:protobuf-java:3.11.4")
-    implementation("org.slf4j:slf4j-api:1.7.30")
 
     testImplementation("junit:junit:4.12")
 }
@@ -138,7 +137,6 @@ tasks {
         archiveBaseName.set("zip-signer")
         relocate("com.google.protobuf", "thirdparty.protobuf")
         relocate("kotlin", "thirdparty.kotlin")
-        relocate("org.slf4j", "thirdparty.slf4j")
         relocate("org.bouncycastle", "thirdparty.bouncycastle")
         relocate("org.intellij", "thirdparty.intellij")
     }
