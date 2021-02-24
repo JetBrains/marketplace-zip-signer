@@ -36,6 +36,11 @@ object CertificateUtils {
         LocalDate.of(9999, 12, 31).atStartOfDay().toInstant(ZoneOffset.UTC)
     )
 
+    /**
+     * Utility function to load X509 certificate from a file using the X509 CertificateFactory
+     * @param file - file containing X509 certificate
+     * @return certificates from file
+     */
     @JvmStatic
     fun loadCertificatesFromFile(file: File): List<X509Certificate> {
         val certificateFactory = CertificateFactory.getInstance("X509")
@@ -74,6 +79,16 @@ object CertificateUtils {
         return certs.zipWithNext().all { it.first.isSignedBy(it.second) }
     }
 
+    /**
+     * Utility function to download CRLs for certificate chain. URLs of revocation lists are extracted from the
+     * certificates CRL distribution point extension.
+     * @see getCrlUris
+     * Result of the function call should be used to find revoked certificates
+     * @see findRevokedCertificate
+     * @param certs - certificate chain, each certificate should by signed be the next one
+     * @return - revocation lists, one for each certificate except CA
+     * @throws IllegalArgumentException if the certificate has no or multiple CRL distribution points
+     */
     @Suppress("unused")
     @JvmStatic
     fun getRevocationLists(certs: List<X509Certificate>): List<X509CRL> {
@@ -88,6 +103,11 @@ object CertificateUtils {
         }
     }
 
+    /**
+     * Utility function to get CRL distribution points URLs from the certificate.
+     * @param certificate - X509 certificate
+     * @return URI extracted from CRL distribution points certificate extension
+     */
     @JvmStatic
     fun getCrlUris(certificate: X509Certificate): List<URI> {
         val crlDistributionPointsBytes = certificate.getExtensionValue(Extension.cRLDistributionPoints.id)
@@ -113,6 +133,15 @@ object CertificateUtils {
         return crlUris
     }
 
+    /**
+     * This function should be used as a part of the certificate chain validity check.
+     * It can not be used to detect revoked CA, this certificate can be revoked only by the user in the certificate manager
+     * If returning value is not null then at least one of the certificates was revoked and an error should be reported
+     * @param certs - certificate chain, each certificate should by signed be the next one
+     * @param revocationLists - revocation lists, one for each certificate except CA.
+     * The revocation list with index n should be signed by the certificate with index n+1.
+     * @return first found revoked certificate starting from the top-level certificates, null if any.
+     */
     @JvmStatic
     fun findRevokedCertificate(
         certs: List<X509Certificate>,

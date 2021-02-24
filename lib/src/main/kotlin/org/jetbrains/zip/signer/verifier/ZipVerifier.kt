@@ -24,6 +24,18 @@ import java.security.cert.X509Certificate
 
 @ExperimentalUnsignedTypes
 object ZipVerifier {
+    /**
+     * Entrypoint for the zip verification process.
+     * This function reads zip signer block, checks file hash digest,
+     * verifies signatures of hash digest and checks that certificate chains
+     * provided in the metadata are valid (each certificate is signed by the next one).
+     *
+     * @see ZipVerificationResult to found information about the next steps
+     *
+     * @param file - zip archive file
+     * @return verification result
+     */
+    @JvmStatic
     fun verify(file: File): ZipVerificationResult {
         RandomAccessFile(file, "r").use {
             return verify(FileChannelDataSource(it.channel))
