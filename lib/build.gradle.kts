@@ -94,9 +94,12 @@ publishing {
         maven {
             url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
 
+            val mavenCentralUsername: String? by project
+            val mavenCentralPassword: String? by project
+
             credentials {
-                username = findProperty("mavenCentralUsername").toString()
-                password = findProperty("mavenCentralPassword").toString()
+                username = mavenCentralUsername
+                password = mavenCentralPassword
             }
         }
     }
@@ -105,8 +108,8 @@ publishing {
 signing {
     isRequired = project.version != "DEV"
 
-    val signingKey = findProperty("signingKey")?.toString()
-    val signingPassword = findProperty("signingPassword")?.toString()
+    val signingKey: String? by project
+    val signingPassword: String? by project
 
     useInMemoryPgpKeys(signingKey, signingPassword)
     sign(publishing.publications["zip-signer-maven"])
