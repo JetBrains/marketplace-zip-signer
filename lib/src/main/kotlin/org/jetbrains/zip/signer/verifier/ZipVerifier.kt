@@ -15,6 +15,7 @@ import org.jetbrains.zip.signer.zip.ZipSections
 import org.jetbrains.zip.signer.zip.ZipUtils
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSectionsInformation
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteOrder
 import java.security.DigestException
@@ -36,6 +37,7 @@ object ZipVerifier {
      * @return verification result
      */
     @JvmStatic
+    @Throws(IOException::class)
     fun verify(file: File): ZipVerificationResult {
         RandomAccessFile(file, "r").use {
             return verify(FileChannelDataSource(it.channel))
