@@ -42,9 +42,12 @@ object CertificateUtils {
      * @return certificates from file
      */
     @JvmStatic
-    fun loadCertificatesFromFile(file: File): List<X509Certificate> {
+    fun loadCertificatesFromFile(file: File) = loadCertificates(file.readText())
+
+    @JvmStatic
+    fun loadCertificates(certificate: String): List<X509Certificate> {
         val certificateFactory = CertificateFactory.getInstance("X509")
-        return certificateFactory.generateCertificates(file.inputStream().buffered()).map { it as X509Certificate }
+        return certificateFactory.generateCertificates(certificate.byteInputStream()).map { it as X509Certificate }
     }
 
     fun generateDummyCertificate(keyPair: PEMKeyPair): X509Certificate {
