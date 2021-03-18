@@ -11,6 +11,7 @@ import org.bouncycastle.openssl.jcajce.JceOpenSSLPKCS8DecryptorProviderBuilder
 import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder
 import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo
 import java.io.File
+import java.io.IOException
 import java.io.Reader
 import java.security.PrivateKey
 
@@ -24,6 +25,7 @@ object PrivateKeyUtils {
      */
     @Suppress("unused")
     @JvmStatic
+    @Throws(IOException::class)
     fun loadPrivateKey(file: File, password: CharArray?) = loadPrivateKey(file.readText(), password)
 
     /**
@@ -33,6 +35,7 @@ object PrivateKeyUtils {
      * @return private key loaded from file
      */
     @JvmStatic
+    @Throws(IOException::class)
     fun loadPrivateKey(encodedPrivateKey: String, password: CharArray?): PrivateKey {
         val keyPair = loadKeyPair(encodedPrivateKey.reader(), password)
         return JcaPEMKeyConverter().getPrivateKey(keyPair.privateKeyInfo)

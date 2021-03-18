@@ -7,6 +7,7 @@ import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
@@ -20,10 +21,8 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.math.BigInteger
 import java.net.URI
+import java.security.cert.*
 import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
-import java.security.cert.X509CRL
-import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -38,13 +37,20 @@ object CertificateUtils {
 
     /**
      * Utility function to load X509 certificate from a file using the X509 CertificateFactory
-     * @param file - file containing X509 certificate
+     * @param file - file containing X509 certificates
      * @return certificates from file
      */
     @JvmStatic
+    @Throws(CertificateException::class)
     fun loadCertificatesFromFile(file: File) = loadCertificates(file.readText())
 
+    /**
+     * Utility function to load X509 certificate from a string using the X509 CertificateFactory
+     * @param certificate - string containing X509 certificates
+     * @return loaded certificates
+     */
     @JvmStatic
+    @Throws(CertificateException::class)
     fun loadCertificates(certificate: String): List<X509Certificate> {
         val certificateFactory = CertificateFactory.getInstance("X509")
         return certificateFactory.generateCertificates(certificate.byteInputStream()).map { it as X509Certificate }
