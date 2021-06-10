@@ -89,20 +89,6 @@ publishing {
             configurePom()
         }
     }
-
-    repositories {
-        maven {
-            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
-
-            val mavenCentralUsername: String? by project
-            val mavenCentralPassword: String? by project
-
-            credentials {
-                username = mavenCentralUsername
-                password = mavenCentralPassword
-            }
-        }
-    }
 }
 
 signing {
