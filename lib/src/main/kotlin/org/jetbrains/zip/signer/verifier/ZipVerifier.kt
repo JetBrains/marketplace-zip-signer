@@ -16,8 +16,10 @@ import org.jetbrains.zip.signer.zip.ZipUtils
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSectionsInformation
 import java.io.File
 import java.io.IOException
-import java.io.RandomAccessFile
 import java.nio.ByteOrder
+import java.nio.channels.FileChannel
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.security.DigestException
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
@@ -38,10 +40,23 @@ object ZipVerifier {
      */
     @JvmStatic
     @Throws(IOException::class)
-    fun verify(file: File): ZipVerificationResult {
-        RandomAccessFile(file, "r").use {
-            return verify(FileChannelDataSource(it.channel))
-        }
+    fun verify(file: File): ZipVerificationResult = verify(file.toPath())
+
+    /**
+     * Entrypoint for the zip verification process.
+     * This function reads zip signer block, checks file hash digest,
+     * verifies signatures of hash digest and checks that certificate chains
+     * provided in the metadata are valid (each certificate is signed by the next one).
+     *
+     * @see ZipVerificationResult to found information about the next steps
+     *
+     * @param path - path of zip archive file
+     * @return verification result
+     */
+    @JvmStatic
+    @Throws(IOException::class)
+    fun verify(path: Path): ZipVerificationResult {
+        return FileChannel.open(path, StandardOpenOption.READ).use { verify(FileChannelDataSource(it)) }
     }
 
     private fun verify(dataSource: DataSource): ZipVerificationResult {
