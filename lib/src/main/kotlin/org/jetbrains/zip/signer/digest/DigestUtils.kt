@@ -12,7 +12,7 @@ internal object DigestUtils {
         maximumChunkSize: Int = 1024 * 1024 // 1MB
     ): List<Digest> {
         val chunkIterators = content.map { ChunkIterator(it, maximumChunkSize) }
-        val chunkCount = chunkIterators.sumBy { it.chunkCount }
+        val chunkCount = chunkIterators.sumOf { it.chunkCount }
         val digesters = digestAlgorithms.map { ChunkDigester(it, chunkCount) }
         chunkIterators.forEach { chunkIterator ->
             chunkIterator.forEach { chunk ->

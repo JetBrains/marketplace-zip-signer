@@ -27,7 +27,7 @@ object PublicKeyUtils {
         val decodedKeyByteBuffer = ByteBuffer.wrap(Base64.getDecoder().decode(base64Encoded))
         val algorithmName = String(decodedKeyByteBuffer.getLengthPrefixedArray())
             .removePrefix("ssh-")
-            .toUpperCase()
+            .uppercase()
         return when (algorithmName) {
             SupportedPublicKeysAlgorithms.RSA.openSshName -> getSshRsaPublicKey(decodedKeyByteBuffer)
             SupportedPublicKeysAlgorithms.DSA.openSshName -> getSshDsaPublicKey(decodedKeyByteBuffer)
