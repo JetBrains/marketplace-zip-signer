@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-    implementation("com.github.spullara.cli-parser:cli-parser:1.1.2")
+    implementation("com.github.spullara.cli-parser:cli-parser:1.1.5")
     implementation(project(":lib"))
 }
 
