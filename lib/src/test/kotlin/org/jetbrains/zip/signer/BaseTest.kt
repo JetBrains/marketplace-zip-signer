@@ -27,17 +27,19 @@ open class BaseTest {
         javaClass.classLoader.getResource(resourceFilePath).file
     )
 
-    fun createZipAndSign(testFileContent: String, signs: List<SignerInfo>): File {
-        val uuid = UUID.randomUUID().toString()
-        val inputZip = ZipUtils.generateZipFile("$tmpDirectory/$uuid.zip", ENTRY_NAME, testFileContent)
-        val outputFile = File("$tmpDirectory/$uuid-output.zip")
+    fun createZip(testFileContent: String, fileName: String) =
+        ZipUtils.generateZipFile("$tmpDirectory/$fileName.zip", ENTRY_NAME, testFileContent)
+
+    fun sign(inputZip: File, signs: List<SignerInfo>) : File {
+        val inputName = inputZip.name.substring(0, inputZip.name.length - ".zip".length)
+        val outputFile = File("$tmpDirectory/$inputName-output.zip")
         var prevFile = inputZip
 
         signs.forEachIndexed { i, (certificates, privateKey) ->
-            val newFile = File("$tmpDirectory/$uuid-$i.zip")
+            val newFile = File("$tmpDirectory/$inputName-$i.zip")
             ZipSigner.sign(
                 prevFile,
-                File("$tmpDirectory/$uuid-$i.zip"),
+                File("$tmpDirectory/$inputName-$i.zip"),
                 certificates,
                 DefaultSignatureProvider(
                     PublicKeyUtils.getSuggestedSignatureAlgorithm(certificates[0].publicKey),
@@ -49,6 +51,12 @@ open class BaseTest {
         prevFile.renameTo(outputFile)
 
         return outputFile
+    }
+
+    fun createZipAndSign(testFileContent: String, signs: List<SignerInfo>): File {
+        val uuid = UUID.randomUUID().toString()
+        val inputZip = createZip(testFileContent, uuid)
+        return sign(inputZip, signs)
     }
 
     fun createZipAndSignWithChain(testFileContent: String, chain: CertificateChain): File {

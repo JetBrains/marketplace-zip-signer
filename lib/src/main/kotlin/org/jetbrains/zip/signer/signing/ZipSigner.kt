@@ -38,6 +38,30 @@ object ZipSigner {
         }
     }
 
+    @JvmStatic
+    fun unsign(
+        inputFile: File,
+        outputFile: File
+    ) {
+        RandomAccessFile(inputFile, "r").use { inputRandomAccessFile ->
+            RandomAccessFile(outputFile, "rw").use { outputRandomAccessFile ->
+                outputRandomAccessFile.setLength(0)
+                val inputDataSource = FileChannelDataSource(inputRandomAccessFile.channel)
+                val inputZipSectionsInformation = ZipUtils.findZipSectionsInformation(inputDataSource)
+                val inputSigningBlock = ZipMetadata.findInZip(inputDataSource, inputZipSectionsInformation)
+                val inputZipSections =
+                    ZipUtils.findZipSections(inputDataSource, inputZipSectionsInformation, inputSigningBlock)
+
+
+                inputZipSections.beforeSigningBlockSection.feed(outputRandomAccessFile.channel)
+                inputZipSections.centralDirectorySection.feed(outputRandomAccessFile.channel)
+
+                val outputEocdRecord = getOutputEocdRecord(inputZipSections, 0)
+                outputRandomAccessFile.channel.write(outputEocdRecord)
+            }
+        }
+    }
+
     private fun sign(
         inputDataSource: DataSource,
         outputFileChannel: FileChannel,
@@ -86,20 +110,24 @@ object ZipSigner {
         outputMetadata: ZipMetadata,
         outputFileChannel: FileChannel
     ) {
-        val outputEocdRecord = inputZipSections.endOfCentralDirectorySection
-            .getByteBuffer(0, inputZipSections.endOfCentralDirectorySection.size().toInt())
-            .apply {
-                order(ByteOrder.LITTLE_ENDIAN)
-                ZipUtils.setZipEocdCentralDirectoryOffset(
-                    this,
-                    (inputZipSections.beforeSigningBlockSection.size() + outputMetadata.size).toUInt()
-                )
-            }
-
+        val outputEocdRecord = getOutputEocdRecord(inputZipSections, outputMetadata.size)
 
         inputZipSections.beforeSigningBlockSection.feed(outputFileChannel)
         outputFileChannel.write(ByteBuffer.wrap(outputMetadata.toByteArray()))
         inputZipSections.centralDirectorySection.feed(outputFileChannel)
         outputFileChannel.write(outputEocdRecord)
     }
+
+    private fun getOutputEocdRecord(
+        inputZipSections: ZipSections,
+        additionalMetadataSize: Int
+    ) = inputZipSections.endOfCentralDirectorySection
+        .getByteBuffer(0, inputZipSections.endOfCentralDirectorySection.size().toInt())
+        .apply {
+            order(ByteOrder.LITTLE_ENDIAN)
+            ZipUtils.setZipEocdCentralDirectoryOffset(
+                this,
+                (inputZipSections.beforeSigningBlockSection.size() + additionalMetadataSize).toUInt()
+            )
+        }
 }
