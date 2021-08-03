@@ -16,7 +16,10 @@ internal object DigestUtils {
         val digesters = digestAlgorithms.map { ChunkDigester(it, chunkCount) }
         chunkIterators.forEach { chunkIterator ->
             chunkIterator.forEach { chunk ->
-                digesters.forEach { it.consume(chunk) }
+                digesters.forEach {
+                    it.consume(chunk)
+                    chunk.rewind()
+                }
             }
         }
         return digesters.map { Digest(it.digestAlgorithm, it.getResult()) }
