@@ -136,4 +136,17 @@ class SigningTest : BaseTest() {
             }
         }
     }
+
+    @Test
+    fun `sign with sha256 and sha512 than verify`() {
+        val signs = listOf(
+            getSHA256Certificates(),
+            getSHA512Certificates()
+        )
+        val testFileContent = testName.methodName
+        createZipAndSign(testFileContent, signs).apply {
+            verifyZip(testFileContent)
+            Assert.assertTrue(isSignedBy(signs))
+        }
+    }
 }

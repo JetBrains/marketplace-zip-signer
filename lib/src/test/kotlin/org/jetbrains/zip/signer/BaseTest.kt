@@ -130,6 +130,16 @@ open class BaseTest {
         getResourceFile("certificates/sub_cert.crt")
     )
 
+    fun getSHA256Certificates() = SignerInfoLoader.loadSignerInfoFromFiles(
+        getResourceFile("certificates/sha256_private.key"),
+        getResourceFile("certificates/sha256.crt")
+    )
+
+    fun getSHA512Certificates() = SignerInfoLoader.loadSignerInfoFromFiles(
+        getResourceFile("certificates/sha512_private.key"),
+        getResourceFile("certificates/sha512.crt")
+    )
+
     fun getECDSACertificate() = SignerInfoLoader.loadSignerInfoFromFiles(
         getResourceFile("certificates/ec_key.pem"),
         getResourceFile("certificates/ecdsa_cert.pem")
