@@ -9,6 +9,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
 import org.junit.rules.TestName
+import java.io.File
+import java.util.*
 
 
 class SigningTest : BaseTest() {
@@ -113,6 +115,25 @@ class SigningTest : BaseTest() {
             ZipUtils.modifyZipFile(this)
             verifyZip(testFileContent)
             Assert.assertFalse(isSignedBy(signs))
+        }
+    }
+
+    @Test
+    fun `unsigned file is identical to original zip`() {
+        val uuid = UUID.randomUUID().toString()
+        val zip = createZip(testName.methodName, uuid);
+        val signedZip = sign(zip, listOf(getCertificate()))
+
+        val unsignedFile = File(signedZip.parentFile, "$uuid-unsigned.zip")
+        ZipSigner.unsign(signedZip, unsignedFile)
+
+        zip.inputStream().use { orig ->
+            unsignedFile.inputStream().use { unsigned ->
+                do {
+                    val origByte = orig.read()
+                    Assert.assertEquals("Original and unsigned zip file differs", origByte, unsigned.read())
+                } while (origByte != -1)
+            }
         }
     }
 }
