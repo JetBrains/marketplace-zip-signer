@@ -1,1 +1,1 @@
-include("cli", "lib")
+include("google-kms-signer-cli", "cli", "lib")
