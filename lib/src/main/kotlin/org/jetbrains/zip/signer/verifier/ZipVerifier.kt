@@ -1,7 +1,6 @@
 package org.jetbrains.zip.signer.verifier
 
 
-import org.jetbrains.zip.signer.datasource.ByteBufferDataSource
 import org.jetbrains.zip.signer.datasource.DataSource
 import org.jetbrains.zip.signer.datasource.FileChannelDataSource
 import org.jetbrains.zip.signer.digest.DigestUtils
@@ -16,7 +15,6 @@ import org.jetbrains.zip.signer.zip.ZipUtils
 import org.jetbrains.zip.signer.zip.ZipUtils.findZipSectionsInformation
 import java.io.File
 import java.io.IOException
-import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -116,22 +114,8 @@ object ZipVerifier {
     }
 
     internal fun checkDigests(zipSections: ZipSections, zipMetadata: ZipMetadata) {
-        val modifiedEocd = zipSections.endOfCentralDirectorySection
-            .getByteBuffer(0, zipSections.endOfCentralDirectorySection.size().toInt())
-            .apply {
-                order(ByteOrder.LITTLE_ENDIAN)
-            }
-        ZipUtils.setZipEocdCentralDirectoryOffset(modifiedEocd, zipSections.beforeSigningBlockSection.size().toUInt())
-
         val actualContentDigests = try {
-            DigestUtils.computeDigest(
-                zipMetadata.digests.map { it.algorithm },
-                listOf(
-                    zipSections.beforeSigningBlockSection,
-                    zipSections.centralDirectorySection,
-                    ByteBufferDataSource(modifiedEocd)
-                )
-            )
+            DigestUtils.computeDigest(zipMetadata.digests.map { it.algorithm }, zipSections)
         } catch (e: DigestException) {
             throw ZipVerificationException("Failed to compute content digests")
         }

@@ -39,6 +39,19 @@ internal object ZipUtils {
         )
     }
 
+    fun getModifiedEocdRecord(
+        inputZipSections: ZipSections,
+        additionalMetadataSize: Int
+    ) = inputZipSections.endOfCentralDirectorySection
+        .getByteBuffer(0, inputZipSections.endOfCentralDirectorySection.size().toInt())
+        .apply {
+            order(ByteOrder.LITTLE_ENDIAN)
+            setZipEocdCentralDirectoryOffset(
+                this,
+                (inputZipSections.beforeSigningBlockSection.size() + additionalMetadataSize).toUInt()
+            )
+        }
+
     internal fun findZipSections(
         zip: DataSource,
         zipSectionsInformation: ZipSectionsInformation,
