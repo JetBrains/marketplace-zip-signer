@@ -1,6 +1,10 @@
+fun properties(key: String) = project.findProperty(key)?.toString()
+
 plugins {
     kotlin("jvm")
     id("com.github.johnrengelman.shadow") version "7.0.0"
+    id("org.jetbrains.changelog") version "1.2.1"
+    id("com.github.breadmoirai.github-release") version "2.2.12"
 }
 
 dependencies {
@@ -15,6 +19,21 @@ tasks {
         }
     }
     shadowJar {
-        archiveName = "zip-signer.jar"
+        archiveFileName.set("marketplace-zip-signer.jar")
     }
+}
+
+changelog {
+    unreleasedTerm.set("next")
+    path.set(projectDir.parentFile.resolve("CHANGELOG.md").canonicalPath)
+}
+
+githubRelease {
+    val releaseNote = changelog.getOrNull("${project.version}")?.toText() ?: ""
+
+    setToken(properties("githubToken"))
+    owner.set("jetbrains")
+    repo.set("marketplace-zip-signer")
+    body.set(releaseNote)
+    releaseAssets.setFrom(tasks.named("shadowJar"))
 }

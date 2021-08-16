@@ -22,8 +22,6 @@ idea {
     }
 }
 
-project.version = if (hasProperty("projectVersion")) findProperty("projectVersion").toString() else "DEV"
-
 java {
     withSourcesJar()
     withJavadocJar()
