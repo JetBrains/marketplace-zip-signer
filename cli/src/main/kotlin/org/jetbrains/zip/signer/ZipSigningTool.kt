@@ -40,20 +40,34 @@ object ZipSigningTool {
         Args.parseOrExit(options, params)
 
         val (certificates, privateKey) = if (options.keyStore != null) {
-            val password =
-                options.keyStorePassword ?: throw IllegalArgumentException("'ks-pass' property not specified")
+            val keyStore = options.keyStore ?: throw IllegalArgumentException("'ks' property not specified")
+            val password = options.keyStorePassword ?: throw IllegalArgumentException("'ks-pass' property not specified")
+
             SignerInfoLoader.loadSignerInfoFromKeystore(
-                file = File(options.keyStore),
+                file = File(keyStore),
                 password = password.toCharArray(),
                 keystoreKeyAlias = options.keyStoreAlias,
                 keystoreType = options.keyStoreType,
                 keystoreProviderName = options.keyStoreProviderName
             )
+        } else if (options.privateKey != null) {
+            val privateKey = options.privateKey ?: throw IllegalArgumentException("'key' property not specified")
+            val privateKeyPassword = options.privateKeyPassword?.toCharArray()
+            val certificate = options.certificate ?: options.certificateFile?.let { File(it).readText() }
+
+            SignerInfoLoader.loadSignerInfoFromText(
+                privateKey,
+                certificate,
+                privateKeyPassword
+            )
         } else {
+            val privateKeyFile = options.privateKeyFile ?: throw IllegalArgumentException("'key-file' property not specified")
+            val privateKeyPassword = options.privateKeyPassword?.toCharArray()
+
             SignerInfoLoader.loadSignerInfoFromFiles(
-                File(options.privateKeyFile),
+                File(privateKeyFile),
                 options.certificateFile?.let { File(it) },
-                options.privateKeyPassword?.toCharArray()
+                privateKeyPassword
             )
         }
 
@@ -110,13 +124,19 @@ class SigningOptions {
     @set:Argument("ks-provider-name", required = false, description = "JCA KeyStore Provider name")
     var keyStoreProviderName: String? = null
 
-    @set:Argument("key", required = false, description = "Private key file")
+    @set:Argument("key", required = false, description = "Private key")
+    var privateKey: String? = null
+
+    @set:Argument("key-file", required = false, description = "Private key file")
     var privateKeyFile: String? = null
 
     @set:Argument("key-pass", required = false, description = "Private key password")
     var privateKeyPassword: String? = null
 
-    @set:Argument("cert", required = false, description = "Certificate file")
+    @set:Argument("cert", required = false, description = "Certificate")
+    var certificate: String? = null
+
+    @set:Argument("cert-file", required = false, description = "Certificate file")
     var certificateFile: String? = null
 }
 
