@@ -42,6 +42,12 @@ object PrivateKeyUtils {
     }
 
     /**
+     * @param key private key
+     * @return PEM key pair. Public key can be null if private key file contains only private key
+     */
+    fun loadKeyPair(key: String, password: CharArray?) = loadKeyPair(key.reader(), password)
+
+    /**
      * @param file PEM file with private key
      * @return PEM key pair. Public key can be null if private key file contains only private key
      */
