@@ -2,7 +2,7 @@ fun properties(key: String) = project.findProperty(key)?.toString()
 
 plugins {
     kotlin("jvm")
-    id("com.github.johnrengelman.shadow") version "7.0.0"
+    id("com.github.johnrengelman.shadow") version "7.1.0"
     id("org.jetbrains.changelog") version "1.3.0"
     id("com.github.breadmoirai.github-release") version "2.2.12"
 }
