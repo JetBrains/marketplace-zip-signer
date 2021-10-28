@@ -39,7 +39,7 @@ object GoogleCloudSignerCli {
 
         val certificates = CertificateUtils.loadCertificatesFromFile(File(options.certificateFile))
         val firstCertKey = certificates.first().publicKey
-        val signatureAlgorithm = options.digestAlgorithm.ifEmpty { null }?.let { digestAlgorithm ->
+        val signatureAlgorithm = options.digestAlgorithm?.let { digestAlgorithm ->
             if (firstCertKey !is RSAKey) {
                 System.err.println("Digest algorithm can be specified only for RSA keys")
                 exitProcess(1)
@@ -117,10 +117,10 @@ class SigningOptions {
 
     @set:Argument(
         "digestAlgorithm",
-        required = true,
+        required = false,
         description = "DigestAlgorithm algorithm to use. Available options for RSA are SHA256 and SHA512"
     )
-    var digestAlgorithm: String = ""
+    var digestAlgorithm: String? = null
 }
 
 class VerifyOptions {
