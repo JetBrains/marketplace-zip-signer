@@ -2,6 +2,7 @@ package org.jetbrains.zip.signer
 
 import com.sampullara.cli.Args
 import com.sampullara.cli.Argument
+import org.jetbrains.zip.signer.metadata.SignatureAlgorithm
 import org.jetbrains.zip.signer.signer.CertificateUtils
 import org.jetbrains.zip.signer.signer.PublicKeyUtils
 import org.jetbrains.zip.signer.signing.ZipSigner
@@ -10,6 +11,7 @@ import org.jetbrains.zip.signer.verifier.MissingSignatureResult
 import org.jetbrains.zip.signer.verifier.SuccessfulVerificationResult
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import java.io.File
+import java.security.interfaces.RSAKey
 import kotlin.system.exitProcess
 
 object GoogleCloudSignerCli {
@@ -36,6 +38,21 @@ object GoogleCloudSignerCli {
         Args.parseOrExit(options, params)
 
         val certificates = CertificateUtils.loadCertificatesFromFile(File(options.certificateFile))
+        val firstCertKey = certificates.first().publicKey
+        val signatureAlgorithm = options.digestAlgorithm.ifEmpty { null }?.let { digestAlgorithm ->
+            if (firstCertKey !is RSAKey) {
+                System.err.println("Digest algorithm can be specified only for RSA keys")
+                exitProcess(1)
+            }
+            when (digestAlgorithm) {
+                "SHA256" -> SignatureAlgorithm.RSA_PKCS1_V1_5_WITH_SHA256
+                "SHA512" -> SignatureAlgorithm.RSA_PKCS1_V1_5_WITH_SHA512
+                else -> {
+                    System.err.println("Unexpected digest algorithm: $digestAlgorithm")
+                    exitProcess(1)
+                }
+            }
+        } ?: PublicKeyUtils.getSuggestedSignatureAlgorithm(firstCertKey)
 
         ZipSigner.sign(
             File(options.inputFilePath),
@@ -47,7 +64,7 @@ object GoogleCloudSignerCli {
                 options.keyRingId,
                 options.keyId,
                 options.keyVersion,
-                PublicKeyUtils.getSuggestedSignatureAlgorithm(certificates.first().publicKey)
+                signatureAlgorithm
             )
         )
     }
@@ -97,6 +114,13 @@ class SigningOptions {
 
     @set:Argument("cert", required = true, description = "Certificate file")
     var certificateFile: String = ""
+
+    @set:Argument(
+        "digestAlgorithm",
+        required = true,
+        description = "DigestAlgorithm algorithm to use. Available options for RSA are SHA256 and SHA512"
+    )
+    var digestAlgorithm: String = ""
 }
 
 class VerifyOptions {
