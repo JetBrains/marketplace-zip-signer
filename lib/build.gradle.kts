@@ -10,7 +10,7 @@ plugins {
 }
 
 dependencies {
-    api("org.bouncycastle:bcpkix-jdk15on:1.69")
+    api("org.bouncycastle:bcpkix-jdk15on:1.70")
     implementation("com.google.protobuf:protobuf-java:3.19.1")
 
     testImplementation("junit:junit:4.13.2")
