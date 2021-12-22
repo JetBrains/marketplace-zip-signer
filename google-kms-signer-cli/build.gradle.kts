@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-    implementation(platform("com.google.cloud:libraries-bom:24.0.0"))
+    implementation(platform("com.google.cloud:libraries-bom:24.1.1"))
     implementation("com.google.cloud:google-cloud-kms")
     implementation("com.github.spullara.cli-parser:cli-parser:1.1.5")
     implementation(project(":lib"))
