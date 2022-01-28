@@ -39,7 +39,7 @@ tasks {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.19.3"
+        artifact = "com.google.protobuf:protoc:3.19.4"
     }
     generatedFilesBaseDir = "$projectDir/src/generated"
 }
