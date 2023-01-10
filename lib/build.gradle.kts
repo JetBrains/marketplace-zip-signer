@@ -2,7 +2,7 @@ import com.google.protobuf.gradle.*
 
 plugins {
     kotlin("jvm")
-    id("com.google.protobuf") version "0.9.1"
+    id("com.google.protobuf") version "0.9.2"
     id("idea")
     id("maven-publish")
     id("signing")
