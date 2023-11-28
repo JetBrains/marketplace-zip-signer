@@ -9,3 +9,7 @@ allprojects {
         mavenCentral()
     }
 }
+
+subprojects {
+    buildDir = rootProject.buildDir.resolve(project.name)
+}
