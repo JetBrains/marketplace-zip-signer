@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm")
     id("com.github.johnrengelman.shadow") version "7.1.2"
     id("org.jetbrains.changelog") version "2.2.0"
-    id("com.github.breadmoirai.github-release") version "2.4.1"
+    id("com.github.breadmoirai.github-release") version "2.5.2"
 }
 
 dependencies {
