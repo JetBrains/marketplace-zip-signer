@@ -1,5 +1,3 @@
-import com.google.protobuf.gradle.*
-
 plugins {
     kotlin("jvm")
     id("com.google.protobuf") version "0.9.4"
@@ -26,15 +24,8 @@ java {
     withSourcesJar()
     withJavadocJar()
 
-    sourceCompatibility = JavaVersion.VERSION_1_7
-    targetCompatibility = JavaVersion.VERSION_1_7
-}
-
-tasks {
-    compileKotlin {
-        targetCompatibility = JavaVersion.VERSION_1_7.toString()
-        sourceCompatibility = JavaVersion.VERSION_1_7.toString()
-    }
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 protobuf {
