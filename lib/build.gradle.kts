@@ -106,8 +106,13 @@ signing {
     sign(publishing.publications["zip-signer-maven-all"])
 }
 
-
 tasks {
+    // Workaround for Gradle warning about publish tasks using signing task outputs without explicit dependencies
+    // https://github.com/gradle/gradle/issues/26091
+    val signingTasks = withType<Sign>()
+    withType<AbstractPublishToMaven>().configureEach {
+        mustRunAfter(signingTasks)
+    }
     test {
         maxParallelForks = Runtime.getRuntime().availableProcessors()
 
