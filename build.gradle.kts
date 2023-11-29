@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.6.21"
+    kotlin("jvm") version "1.8.21"
 }
 
 allprojects {
@@ -8,4 +8,8 @@ allprojects {
     repositories {
         mavenCentral()
     }
+}
+
+subprojects {
+    buildDir = rootProject.buildDir.resolve(project.name)
 }
