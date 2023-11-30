@@ -33,6 +33,7 @@ githubRelease {
     val releaseNote = changelog.getOrNull(version)?.toText() ?: ""
 
     setToken(properties("githubToken"))
+    targetCommitish.set("master")
     owner.set("jetbrains")
     repo.set("marketplace-zip-signer")
     body.set(releaseNote)
