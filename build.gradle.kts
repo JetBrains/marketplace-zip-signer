@@ -12,4 +12,14 @@ allprojects {
 
 subprojects {
     buildDir = rootProject.buildDir.resolve(project.name)
+    apply(plugin = "org.jetbrains.kotlin.jvm")
+
+    java {
+        withSourcesJar()
+        withJavadocJar()
+
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(11))
+        }
+    }
 }

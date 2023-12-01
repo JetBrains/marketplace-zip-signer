@@ -1,5 +1,4 @@
 plugins {
-    kotlin("jvm")
     id("com.google.protobuf") version "0.9.4"
     id("idea")
     id("maven-publish")
@@ -17,15 +16,6 @@ dependencies {
 idea {
     module {
         sourceDirs.add(file("${projectDir}/src/generated/main/java"))
-    }
-}
-
-java {
-    withSourcesJar()
-    withJavadocJar()
-
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(11))
     }
 }
 
