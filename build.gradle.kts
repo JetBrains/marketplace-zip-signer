@@ -107,6 +107,7 @@ signing {
 
     useInMemoryPgpKeys(signingKey, signingPassword)
     sign(publishing.publications["zip-signer-maven"])
+    sign(publishing.publications["zip-signer-cli-maven"])
     sign(publishing.publications["zip-signer-maven-all"])
 }
 
