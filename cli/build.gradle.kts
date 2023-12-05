@@ -17,6 +17,7 @@ tasks {
         }
     }
     shadowJar {
+        archiveClassifier.set("")
         archiveFileName.set("marketplace-zip-signer-cli.jar")
     }
 }
