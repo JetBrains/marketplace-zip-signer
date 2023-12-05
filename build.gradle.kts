@@ -73,6 +73,9 @@ publishing {
             artifactId = "marketplace-zip-signer"
             version = project.version.toString()
             from(project(":lib").components["java"])
+            artifact(project(":cli").tasks.shadowJar) {
+                classifier = "cli"
+            }
             configurePom()
         }
         create<MavenPublication>("zip-signer-maven-all") {
