@@ -65,7 +65,11 @@ publishing {
             groupId = "org.jetbrains"
             artifactId = "marketplace-zip-signer-cli"
             version = project.version.toString()
-            project(":cli").shadow.component(this@create)
+            artifact(project(":cli").tasks.shadowJar) {
+                classifier = ""
+            }
+            artifact(project(":cli").tasks.kotlinSourcesJar)
+            artifact(project(":cli").tasks.named("javadocJar"))
             configurePom()
         }
         create<MavenPublication>("zip-signer-maven") {
