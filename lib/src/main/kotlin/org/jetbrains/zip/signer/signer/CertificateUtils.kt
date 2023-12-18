@@ -1,7 +1,7 @@
 package org.jetbrains.zip.signer.signer
 
+import org.bouncycastle.asn1.ASN1IA5String
 import org.bouncycastle.asn1.ASN1InputStream
-import org.bouncycastle.asn1.DERIA5String
 import org.bouncycastle.asn1.DEROctetString
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
@@ -94,7 +94,7 @@ object CertificateUtils {
      * @see getCrlUris
      * Result of the function call should be used to find revoked certificates
      * @see findRevokedCertificate
-     * @param certs - certificate chain, each certificate should by signed be the next one
+     * @param certs - certificate chain, each certificate should be signed be the next one
      * @return - revocation lists, one for each certificate except CA
      * @throws IllegalArgumentException if the certificate has no or multiple CRL distribution points
      */
@@ -133,7 +133,7 @@ object CertificateUtils {
                 val generalNames = GeneralNames.getInstance(distributionPointName.name).names
                 generalNames.forEach { generalName ->
                     if (generalName.tagNo == GeneralName.uniformResourceIdentifier) {
-                        val url = DERIA5String.getInstance(generalName.name).string
+                        val url = ASN1IA5String.getInstance(generalName.name).string
                         crlUris.add(URI(url))
                     }
                 }
@@ -146,7 +146,7 @@ object CertificateUtils {
      * This function should be used as a part of the certificate chain validity check.
      * It can not be used to detect revoked CA, this certificate can be revoked only by the user in the certificate manager
      * If returning value is not null then at least one of the certificates was revoked and an error should be reported
-     * @param certs - certificate chain, each certificate should by signed be the next one
+     * @param certs - certificate chain, each certificate should be signed be the next one
      * @param revocationLists - revocation lists, one for each certificate except CA.
      * The revocation list with index n should be signed by the certificate with index n+1.
      * @return first found revoked certificate starting from the top-level certificates, null if any.
