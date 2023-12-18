@@ -60,14 +60,14 @@ jobs:
 
       - name: Collect CLI Test Results
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-cli
           path: ${{ github.workspace }}/cli/build/reports/tests/test/
 
       - name: Collect Lib Test Results
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-lib
           path: ${{ github.workspace }}/lib/build/reports/tests/test/
