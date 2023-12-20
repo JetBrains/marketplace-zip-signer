@@ -19,6 +19,7 @@ class DefaultSignatureVerifier(
             with(Signature.getInstance(jcaSignatureAlgorithm)) {
                 initVerify(publicKey)
                 update(dataToVerify)
+                this.debugLog()
                 if (!verify(signature)) {
                     throw SignatureException(
                         "Failed to verify $jcaSignatureAlgorithm signature using public key from certificate"
@@ -37,6 +38,17 @@ class DefaultSignatureVerifier(
             throw SignatureException(
                 "Failed to verify $jcaSignatureAlgorithm signature using public key from certificate", e
             )
+        }
+    }
+
+    private fun Signature.debugLog() {
+        println("Signature algorithm: $jcaSignatureAlgorithm")
+        println("Public key algorithm: ${publicKey?.algorithm}")
+        println("Public key format: ${publicKey?.format}")
+        println("Public key encoded: ${publicKey?.encoded}")
+        println("Providers:")
+        provider.entries.forEach {
+            println("\t${it.key}=${it.value}")
         }
     }
 }
