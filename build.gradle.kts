@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("jvm") version "1.9.21"
     id("maven-publish")
@@ -22,8 +24,15 @@ subprojects {
         withSourcesJar()
         withJavadocJar()
 
-        toolchain {
-            languageVersion.set(JavaLanguageVersion.of(11))
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    tasks {
+        withType(KotlinCompile::class.java).all {
+            kotlinOptions {
+                jvmTarget = "1.8"
+            }
         }
     }
 }
