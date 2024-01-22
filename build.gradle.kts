@@ -33,7 +33,7 @@ subprojects {
             /*
               Is needed for TC, otherwise the lib will throw `NoSuchMethodError: java.nio.ByteBuffer.limit`, when
               running on jdk 1.8.
-              See https://www.morling.dev/blog/bytebuffer-and-the-dreaded-nosuchmethoderror/ for the details.
+              See [MP-6250] for the details.
             */
             options.release.set(8)
         }
