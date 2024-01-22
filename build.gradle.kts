@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.5.32"
+    kotlin("jvm") version "1.7.22"
     id("maven-publish")
     id("signing")
     id("com.github.johnrengelman.shadow") version "7.1.2"
