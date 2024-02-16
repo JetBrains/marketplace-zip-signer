@@ -19,7 +19,7 @@ idea {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.1"
+        artifact = "com.google.protobuf:protoc:3.25.3"
     }
     generatedFilesBaseDir = "$projectDir/src/generated"
 }
