@@ -5,6 +5,7 @@ plugins {
     id("maven-publish")
     id("signing")
     id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
 }
 
 allprojects {
@@ -100,18 +101,16 @@ publishing {
             configurePom()
         }
     }
+}
 
+nexusPublishing {
     repositories {
-        maven {
-            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
+        val mavenCentralOssrhUsername: String? by project
+        val mavenCentralOssrhToken: String? by project
 
-            val mavenCentralUsername: String? by project
-            val mavenCentralPassword: String? by project
-
-            credentials {
-                username = mavenCentralUsername
-                password = mavenCentralPassword
-            }
+        sonatype {
+            username.set(mavenCentralOssrhUsername)
+            password.set(mavenCentralOssrhToken)
         }
     }
 }
