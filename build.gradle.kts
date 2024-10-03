@@ -104,6 +104,7 @@ publishing {
 }
 
 nexusPublishing {
+    packageGroup.set("org.jetbrains")
     repositories {
         val mavenCentralOssrhUsername: String? by project
         val mavenCentralOssrhToken: String? by project
