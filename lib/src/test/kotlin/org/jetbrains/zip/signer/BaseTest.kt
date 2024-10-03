@@ -19,7 +19,7 @@ import java.util.*
 
 open class BaseTest {
     companion object {
-        private val tmpDirectory: String = System.getProperty("project.tempDir")
+        private val tmpDirectory: String = System.getProperty("project.tempDir") ?: "tmp"
         private const val ENTRY_NAME: String = "test.txt"
     }
 

@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.9.21"
+    kotlin("jvm") version "1.7.22"
     id("maven-publish")
     id("signing")
     id("com.github.johnrengelman.shadow") version "7.1.2"
@@ -24,8 +24,9 @@ subprojects {
         withSourcesJar()
         withJavadocJar()
 
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(8))
+        }
     }
 
     tasks {
