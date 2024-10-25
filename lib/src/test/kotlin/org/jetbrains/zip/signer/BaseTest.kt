@@ -1,6 +1,7 @@
 package org.jetbrains.zip.signer
 
 import org.hamcrest.core.IsEqual
+import org.jetbrains.zip.signer.exceptions.ZipVerificationException
 import org.jetbrains.zip.signer.signer.*
 import org.jetbrains.zip.signer.signing.DefaultSignatureProvider
 import org.jetbrains.zip.signer.signing.ZipSigner
@@ -96,17 +97,50 @@ open class BaseTest {
     fun File.isSignedBy(certificateAuthority: X509Certificate, revocationLists: List<X509CRL>? = null): Boolean {
         return when (val result = ZipVerifier.verify(this)) {
             is SuccessfulVerificationResult -> {
-                val chain = result.findCertificateChain(certificateAuthority)!!
+                val chain = result.findCertificateChain(certificateAuthority)
+
+                Assert.assertNotNull(chain)
 
                 val isSigned = result.isSignedBy(certificateAuthority)
                 val isNotRevoked = revocationLists?.let {
-                    CertificateUtils.findRevokedCertificate(chain, it) == null
+                    CertificateUtils.findRevokedCertificate(chain!!, it) == null
                 } ?: true
 
                 isSigned && isNotRevoked
             }
             else -> false
         }
+    }
+
+    fun File.isSignedByAutoExtendCA(certificateAuthority: X509Certificate, revocationLists: List<X509CRL>? = null): Boolean {
+        var parsed = ZipVerifier.verify(this)
+        if (parsed !is SuccessfulVerificationResult) {
+            return false
+        }
+
+        // mimic OpenSSL behavior: try to add CA to the chain if it's not present in the zip
+        if (!parsed.certificateChains.any { it.last() == certificateAuthority }) {
+            // expected 'root' cert is not found, expect single chain
+            Assert.assertEquals(1, parsed.certificateChains.size)
+            // extend chan with the root CA
+            val extendedChain = parsed.certificateChains.first() + certificateAuthority
+            parsed = SuccessfulVerificationResult(listOf(extendedChain))
+
+            if (!CertificateUtils.isValidCertificateChain(extendedChain)) {
+                throw ZipVerificationException("Cannot build a valid certificate chain")
+            }
+        }
+
+        val chain = parsed.findCertificateChain(certificateAuthority)
+
+        Assert.assertNotNull(chain)
+
+        val isSigned = parsed.isSignedBy(certificateAuthority)
+        val isNotRevoked = revocationLists?.let {
+            CertificateUtils.findRevokedCertificate(chain!!, it) == null
+        } ?: true
+
+        return isSigned && isNotRevoked
     }
 
     fun getCACertificate() = SignerInfoLoader.loadSignerInfoFromFiles(

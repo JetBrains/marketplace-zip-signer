@@ -1,6 +1,9 @@
 package org.jetbrains.zip.signer.signing
 
 import org.jetbrains.zip.signer.BaseTest
+import org.jetbrains.zip.signer.exceptions.ZipVerificationException
+import org.jetbrains.zip.signer.signer.CertificateUtils
+import org.jetbrains.zip.signer.utils.CertificateChain
 import org.jetbrains.zip.signer.utils.ZipUtils
 import org.jetbrains.zip.signer.verifier.SuccessfulVerificationResult
 import org.jetbrains.zip.signer.verifier.ZipVerifier
@@ -27,6 +30,44 @@ class SigningTest : BaseTest() {
         createZipAndSign(testFileContent, signs).apply {
             verifyZip(testFileContent)
             Assert.assertTrue(isSignedBy(signs))
+        }
+    }
+
+    /*
+     * A -> B
+     *
+     * Sign with chain of valid certs: B-A, but don't include the cert data; verify with A
+     * */
+    @Test
+    fun `sign then verify but don't store the intermediate certificate`() {
+        val testFileContent = testName.methodName
+        val signer = getValidCertificateWithoutParents("valid")
+
+        createZipAndSignWithChain(testFileContent, signer).apply {
+            verifyZip(testFileContent)
+            Assert.assertTrue(isSignedByAutoExtendCA(getRootCA()))
+        }
+    }
+
+    /*
+     * A -> B -> C
+     *
+     * Sign with chain of valid certs: C-B-A, but don't include the cert data; verify with A
+     * */
+    @Test
+    fun `sign then verify 2 but don't pass the parent`() {
+        val testFileContent = testName.methodName
+        val signer = getValidCertificateWithoutParents("valid2")
+
+        try {
+            createZipAndSignWithChain(testFileContent, signer).apply {
+                verifyZip(testFileContent)
+                Assert.assertTrue(isSignedByAutoExtendCA(getRootCA()))
+            }
+
+            Assert.fail("Expected exception wasn't thrown")
+        } catch (ze: ZipVerificationException) {
+            Assert.assertEquals("Cannot build a valid certificate chain", ze.message)
         }
     }
 
@@ -61,6 +102,7 @@ class SigningTest : BaseTest() {
                 is SuccessfulVerificationResult -> Assert.assertTrue(
                     verificationResult.isSignedBy(getCACertificate().certificates.first())
                 )
+
                 else -> throw AssertionError("Invalid zip signature")
             }
         }
@@ -77,6 +119,7 @@ class SigningTest : BaseTest() {
                 is SuccessfulVerificationResult -> Assert.assertTrue(
                     verificationResult.isSignedBy(getCACertificate().certificates.first())
                 )
+
                 else -> throw AssertionError("Invalid zip signature")
             }
         }
@@ -149,4 +192,15 @@ class SigningTest : BaseTest() {
             Assert.assertTrue(isSignedBy(signs))
         }
     }
+
+    private fun getValidCertificateWithoutParents(name: String) = CertificateChain(
+        certs = listOf(
+            getResourceFile("crl/validChain/$name.crt"),
+        ),
+        privateKeyFile = getResourceFile("crl/validChain/$name.key")
+    )
+
+    private fun getRootCA() = CertificateUtils.loadCertificatesFromFile(
+        getResourceFile("crl/root/rootCA.crt"),
+    ).first()
 }
