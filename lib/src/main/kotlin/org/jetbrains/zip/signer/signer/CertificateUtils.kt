@@ -120,6 +120,7 @@ object CertificateUtils {
     @JvmStatic
     fun getCrlUris(certificate: X509Certificate): List<URI> {
         val crlDistributionPointsBytes = certificate.getExtensionValue(Extension.cRLDistributionPoints.id)
+            ?: return emptyList()
         val derOctetString = ASN1InputStream(ByteArrayInputStream(crlDistributionPointsBytes)).use {
             it.readObject() as DEROctetString
         }
