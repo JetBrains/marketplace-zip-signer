@@ -1,10 +1,12 @@
 package org.jetbrains.zip.signer.signing
 
+import junit.framework.Assert.assertTrue
 import org.jetbrains.zip.signer.BaseTest
 import org.jetbrains.zip.signer.exceptions.ZipVerificationException
 import org.jetbrains.zip.signer.signer.CertificateUtils
 import org.jetbrains.zip.signer.utils.CertificateChain
 import org.jetbrains.zip.signer.utils.ZipUtils
+import org.jetbrains.zip.signer.verifier.InvalidSignatureResult
 import org.jetbrains.zip.signer.verifier.SuccessfulVerificationResult
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import org.junit.Assert
@@ -191,6 +193,20 @@ class SigningTest : BaseTest() {
             verifyZip(testFileContent)
             Assert.assertTrue(isSignedBy(signs))
         }
+    }
+
+    @Test
+    fun `handles plugins signed with an invalid certificate chain`() {
+        val pluginZip = Thread.currentThread()
+            .contextClassLoader
+            .getResource("signed-with-invalid-chain.zip")
+            ?.file
+            ?.let { File(it) }
+            ?: error("Missing resource file")
+
+        val verificationResult = ZipVerifier.verify(pluginZip)
+
+        assertTrue(verificationResult is InvalidSignatureResult)
     }
 
     private fun getValidCertificateWithoutParents(name: String) = CertificateChain(

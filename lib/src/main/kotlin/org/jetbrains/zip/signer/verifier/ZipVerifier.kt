@@ -19,6 +19,8 @@ import java.nio.channels.FileChannel
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.security.DigestException
+import java.security.InvalidKeyException
+import java.security.SignatureException
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -85,7 +87,13 @@ object ZipVerifier {
     private fun verifySignatures(zipMetadata: ZipMetadata): List<List<X509Certificate>> {
         val certFactory = CertificateFactory.getInstance("X.509")
         val digests = zipMetadata.digests.associateBy { it.algorithm }
-        return zipMetadata.signers.map { verifySignatures(digests, it, certFactory) }
+        return try {
+            zipMetadata.signers.map { verifySignatures(digests, it, certFactory) }
+        } catch (e: SignatureException) {
+            throw ZipVerificationException("Failed to verify signatures: ${e.message}", e)
+        } catch (e: InvalidKeyException) {
+            throw ZipVerificationException("Failed to verify signatures: ${e.message}", e)
+        }
     }
 
     private fun verifySignatures(
@@ -117,7 +125,7 @@ object ZipVerifier {
         val actualContentDigests = try {
             DigestUtils.computeDigest(zipMetadata.digests.map { it.algorithm }, zipSections)
         } catch (e: DigestException) {
-            throw ZipVerificationException("Failed to compute content digests")
+            throw ZipVerificationException("Failed to compute content digests: ${e.message}", e)
         }
 
         actualContentDigests.forEach { digest ->
