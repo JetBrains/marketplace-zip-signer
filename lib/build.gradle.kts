@@ -5,8 +5,8 @@ plugins {
 }
 
 dependencies {
-    api("org.bouncycastle:bcpkix-jdk18on:1.77")
-    implementation("com.google.protobuf:protobuf-java:3.25.1")
+    api("org.bouncycastle:bcpkix-jdk18on:1.80")
+    implementation("com.google.protobuf:protobuf-java:3.25.6")
 
     testImplementation("junit:junit:4.13.2")
 }
@@ -19,7 +19,7 @@ idea {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.1"
+        artifact = "com.google.protobuf:protoc:3.25.6"
     }
     generatedFilesBaseDir = "$projectDir/src/generated"
 }
