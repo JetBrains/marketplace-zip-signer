@@ -28,13 +28,15 @@ changelog {
 
 githubRelease {
     val version = "${project.version}"
-    val releaseNote = changelog.getOrNull(version)?.toText() ?: ""
+    val releaseNotes = changelog.getOrNull(version)?.let {
+        changelog.renderItem(it)
+    } ?: ""
 
     setToken(properties("githubToken"))
     targetCommitish.set("master")
     owner.set("jetbrains")
     repo.set("marketplace-zip-signer")
-    body.set(releaseNote)
+    body.set(releaseNotes)
     releaseAssets.setFrom(tasks.named("shadowJar"))
     tagName.set(version)
 }

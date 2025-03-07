@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm") version "1.7.22"
     id("maven-publish")
     id("signing")
-    id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("com.gradleup.shadow") version "8.3.6"
     id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
 }
 
@@ -17,9 +17,9 @@ allprojects {
 }
 
 subprojects {
-    buildDir = rootProject.buildDir.resolve(project.name)
+    layout.buildDirectory.set(rootProject.layout.buildDirectory.dir(project.name))
     apply(plugin = "org.jetbrains.kotlin.jvm")
-    apply(plugin = "com.github.johnrengelman.shadow")
+    apply(plugin = "com.gradleup.shadow")
 
     java {
         withSourcesJar()
