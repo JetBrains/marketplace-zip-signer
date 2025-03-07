@@ -11,9 +11,12 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
 }
 
+val protobufGeneratedDir = project.layout.buildDirectory.dir("src/generated")
+val tmpDir = project.layout.buildDirectory.dir("tmp")
+
 idea {
     module {
-        sourceDirs.add(file("${projectDir}/src/generated/main/java"))
+        sourceDirs.add(protobufGeneratedDir.get().dir("main/java").asFile)
     }
 }
 
@@ -21,9 +24,8 @@ protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:3.25.6"
     }
+    generatedFilesBaseDir = protobufGeneratedDir.get().asFile.absolutePath
 }
-
-val tmpDir = project.layout.buildDirectory.dir("tmp")
 
 tasks {
     test {
@@ -32,7 +34,7 @@ tasks {
         val tmpDir = tmpDir
 
         systemProperties = mapOf(
-            "project.tempDir" to tmpDir
+            "project.tempDir" to tmpDir.get().asFile.absolutePath
         )
 
         finalizedBy("clearTmpDir")
