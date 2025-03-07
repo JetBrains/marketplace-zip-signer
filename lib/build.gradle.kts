@@ -1,7 +1,7 @@
 plugins {
     id("com.google.protobuf") version "0.9.4"
     id("idea")
-    id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("com.gradleup.shadow") version "8.3.6"
 }
 
 dependencies {
