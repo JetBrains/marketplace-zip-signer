@@ -1,37 +1,40 @@
 plugins {
     id("com.google.protobuf") version "0.9.4"
     id("idea")
-    id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("com.gradleup.shadow") version "8.3.6"
 }
 
 dependencies {
-    api("org.bouncycastle:bcpkix-jdk18on:1.77")
-    implementation("com.google.protobuf:protobuf-java:3.25.1")
+    api("org.bouncycastle:bcpkix-jdk18on:1.80")
+    implementation("com.google.protobuf:protobuf-java:3.25.6")
 
     testImplementation("junit:junit:4.13.2")
 }
 
+val protobufGeneratedDir = project.layout.buildDirectory.dir("src/generated")
+val tmpDir = project.layout.buildDirectory.dir("tmp")
+
 idea {
     module {
-        sourceDirs.add(file("${projectDir}/src/generated/main/java"))
+        sourceDirs.add(protobufGeneratedDir.get().dir("main/java").asFile)
     }
 }
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.1"
+        artifact = "com.google.protobuf:protoc:3.25.6"
     }
-    generatedFilesBaseDir = "$projectDir/src/generated"
+    generatedFilesBaseDir = protobufGeneratedDir.get().asFile.absolutePath
 }
 
 tasks {
     test {
         maxParallelForks = Runtime.getRuntime().availableProcessors()
 
-        val tmpDir = "${project.buildDir}/tmp"
+        val tmpDir = tmpDir
 
         systemProperties = mapOf(
-            "project.tempDir" to tmpDir
+            "project.tempDir" to tmpDir.get().asFile.absolutePath
         )
 
         finalizedBy("clearTmpDir")
@@ -46,5 +49,5 @@ tasks {
 }
 
 task("clearTmpDir", type = Delete::class) {
-    delete("${project.buildDir}/tmp")
+    delete(tmpDir)
 }
