@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     api("org.bouncycastle:bcpkix-jdk18on:1.80")
-    implementation("com.google.protobuf:protobuf-java:3.25.1")
+    implementation("com.google.protobuf:protobuf-java:3.25.6")
 
     testImplementation("junit:junit:4.13.2")
 }
@@ -19,16 +19,17 @@ idea {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.1"
+        artifact = "com.google.protobuf:protoc:3.25.6"
     }
-    generatedFilesBaseDir = "$projectDir/src/generated"
 }
+
+val tmpDir = project.layout.buildDirectory.dir("tmp")
 
 tasks {
     test {
         maxParallelForks = Runtime.getRuntime().availableProcessors()
 
-        val tmpDir = "${project.buildDir}/tmp"
+        val tmpDir = tmpDir
 
         systemProperties = mapOf(
             "project.tempDir" to tmpDir
@@ -46,5 +47,5 @@ tasks {
 }
 
 task("clearTmpDir", type = Delete::class) {
-    delete("${project.buildDir}/tmp")
+    delete(tmpDir)
 }

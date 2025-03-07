@@ -17,7 +17,7 @@ allprojects {
 }
 
 subprojects {
-    buildDir = rootProject.buildDir.resolve(project.name)
+    layout.buildDirectory.set(rootProject.layout.buildDirectory.dir(project.name))
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "com.gradleup.shadow")
 
