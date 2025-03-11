@@ -5,7 +5,7 @@ plugins {
     id("maven-publish")
     id("signing")
     id("com.gradleup.shadow") version "8.3.6"
-    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
+    id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
 }
 
 allprojects {
