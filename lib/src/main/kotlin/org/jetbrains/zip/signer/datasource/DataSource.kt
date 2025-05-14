@@ -3,7 +3,7 @@ package org.jetbrains.zip.signer.datasource
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 
-internal interface DataSource {
+interface DataSource {
     /**
      * Returns the amount of data (in bytes) contained in this data source.
      */

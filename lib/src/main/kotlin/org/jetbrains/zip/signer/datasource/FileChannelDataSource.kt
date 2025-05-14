@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.channels.WritableByteChannel
 
-internal class FileChannelDataSource(
+class FileChannelDataSource(
     private val channel: FileChannel,
     private val offset: Long = 0,
     val size: Long? = null
