@@ -3,7 +3,7 @@ package org.jetbrains.zip.signer.datasource
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 
-internal class ByteBufferDataSource(private val buffer: ByteBuffer) :
+class ByteBufferDataSource(private val buffer: ByteBuffer) :
     DataSource {
     private val size: Int = buffer.remaining()
 

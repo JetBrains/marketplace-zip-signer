@@ -59,7 +59,7 @@ object ZipVerifier {
         return FileChannel.open(path, StandardOpenOption.READ).use { verify(FileChannelDataSource(it)) }
     }
 
-    private fun verify(dataSource: DataSource): ZipVerificationResult {
+    fun verify(dataSource: DataSource): ZipVerificationResult {
         val zipSectionsInformation = findZipSectionsInformation(dataSource)
         val zipMetadata = ZipMetadata.findInZip(dataSource, zipSectionsInformation)
             ?: return MissingSignatureResult
