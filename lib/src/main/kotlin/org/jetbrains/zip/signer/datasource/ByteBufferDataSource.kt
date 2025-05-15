@@ -29,17 +29,17 @@ class ByteBufferDataSource(private val buffer: ByteBuffer) :
         offset: Long,
         size: Long
     ) {
-        if (size < 0 || size > size) {
+        if (size < 0 || size > this.size) {
             throw IndexOutOfBoundsException("size: $size, source size: $size")
         }
         writableByteChannel.write(getByteBuffer(offset, size.toInt()))
     }
 
     override fun slice(offset: Long, size: Long): ByteBufferDataSource {
-        if (offset == 0L && size == size) {
+        if (offset == 0L && size.toInt() == this.size) {
             return this
         }
-        if (size < 0 || size > size) {
+        if (size < 0 || size > this.size) {
             throw IndexOutOfBoundsException("size: $size, source size: $size")
         }
         return ByteBufferDataSource(getByteBuffer(offset, size.toInt()))
