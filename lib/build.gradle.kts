@@ -22,7 +22,7 @@ idea {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.6"
+        artifact = "com.google.protobuf:protoc:4.31.1"
     }
     generatedFilesBaseDir = protobufGeneratedDir.get().asFile.absolutePath
 }
