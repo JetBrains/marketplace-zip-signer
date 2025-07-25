@@ -1,11 +1,21 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.util.Base64
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 
 plugins {
     kotlin("jvm") version "1.9.25"
     id("maven-publish")
     id("signing")
     id("com.gradleup.shadow") version "8.3.6"
-    id("io.github.gradle-nexus.publish-plugin") version "1.3.0"
+}
+
+buildscript {
+    dependencies {
+        classpath("com.squareup.okhttp3:okhttp:4.12.0")
+    }
 }
 
 allprojects {
@@ -45,6 +55,13 @@ dependencies {
 }
 
 publishing {
+    repositories {
+        maven {
+            name = "artifacts"
+            url = uri(layout.buildDirectory.dir("artifacts/maven"))
+        }
+    }
+
     publications {
         fun MavenPublication.configurePom() {
             pom {
@@ -103,19 +120,6 @@ publishing {
     }
 }
 
-nexusPublishing {
-    packageGroup.set("org.jetbrains")
-    repositories {
-        val mavenCentralOssrhUsername: String? by project
-        val mavenCentralOssrhToken: String? by project
-
-        sonatype {
-            username.set(mavenCentralOssrhUsername)
-            password.set(mavenCentralOssrhToken)
-        }
-    }
-}
-
 signing {
     isRequired = project.version != "DEV"
 
@@ -134,5 +138,59 @@ tasks {
     val signingTasks = withType<Sign>()
     withType<AbstractPublishToMaven>().configureEach {
         mustRunAfter(signingTasks)
+    }
+
+    val packSonatypeCentralBundle by registering(Zip::class) {
+        group = "publishing"
+
+        dependsOn(":publishAllPublicationsToArtifactsRepository")
+
+        from(layout.buildDirectory.dir("artifacts/maven"))
+        archiveFileName.set("bundle.zip")
+        destinationDirectory.set(layout.buildDirectory)
+    }
+
+    val publishMavenToCentralPortal by registering {
+        group = "publishing"
+
+        dependsOn(packSonatypeCentralBundle)
+
+        doLast {
+            val uriBase = "https://central.sonatype.com/api/v1/publisher/upload"
+            val publishingType = "USER_MANAGED"
+            val deploymentName = "${project.name}-$version"
+            val uri = "$uriBase?name=$deploymentName&publishingType=$publishingType"
+
+            val centralPortalUserName: String? by project
+            val centralPortalToken: String? by project
+
+            val base64Auth = Base64
+                .getEncoder()
+                .encode("$centralPortalUserName:$centralPortalToken".toByteArray())
+                .toString(Charsets.UTF_8)
+            val bundleFile = packSonatypeCentralBundle.get().archiveFile.get().asFile
+
+            println("Sending request to $uri...")
+
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url(uri)
+                .header("Authorization", "Bearer $base64Auth")
+                .post(
+                    MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("bundle", bundleFile.name, bundleFile.asRequestBody())
+                        .build()
+                )
+                .build()
+            client.newCall(request).execute().use { response ->
+                val statusCode = response.code
+                println("Upload status code: $statusCode")
+                println("Upload result: ${response.body!!.string()}")
+                if (statusCode != 201) {
+                    error("Upload error to Central repository. Status code $statusCode.")
+                }
+            }
+        }
     }
 }
