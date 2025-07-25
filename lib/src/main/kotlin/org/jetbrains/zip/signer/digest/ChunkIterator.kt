@@ -23,7 +23,7 @@ internal class ChunkIterator(
 
     private fun getChunkCount(inputSize: Long, chunkSize: Int): Int {
         val chunkCountLong = (inputSize + chunkSize - 1) / chunkSize
-        require(chunkCount < Int.MAX_VALUE) {
+        require(chunkCountLong < Int.MAX_VALUE) {
             "Number of chunks in dataSource is greater than max int."
         }
         return chunkCountLong.toInt()
