@@ -6,7 +6,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 
 plugins {
-    kotlin("jvm") version "1.9.25"
+    kotlin("jvm") version "2.2.10"
     id("maven-publish")
     id("signing")
     id("com.gradleup.shadow") version "8.3.6"
