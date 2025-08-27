@@ -2,7 +2,7 @@ package org.jetbrains.zip.signer.verifier
 
 
 import org.jetbrains.zip.signer.datasource.DataSource
-import org.jetbrains.zip.signer.datasource.FileChannelDataSource
+import org.jetbrains.zip.signer.datasource.SeekableByteChannelDataSource
 import org.jetbrains.zip.signer.digest.DigestUtils
 import org.jetbrains.zip.signer.exceptions.ZipVerificationException
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
@@ -56,7 +56,7 @@ object ZipVerifier {
     @JvmStatic
     @Throws(IOException::class)
     fun verify(path: Path): ZipVerificationResult {
-        return FileChannel.open(path, StandardOpenOption.READ).use { verify(FileChannelDataSource(it)) }
+        return FileChannel.open(path, StandardOpenOption.READ).use { verify(SeekableByteChannelDataSource(it)) }
     }
 
     fun verify(dataSource: DataSource): ZipVerificationResult {

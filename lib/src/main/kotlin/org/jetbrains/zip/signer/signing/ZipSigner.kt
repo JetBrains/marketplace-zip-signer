@@ -1,7 +1,7 @@
 package org.jetbrains.zip.signer.signing
 
 import org.jetbrains.zip.signer.datasource.DataSource
-import org.jetbrains.zip.signer.datasource.FileChannelDataSource
+import org.jetbrains.zip.signer.datasource.SeekableByteChannelDataSource
 import org.jetbrains.zip.signer.digest.DigestUtils
 import org.jetbrains.zip.signer.metadata.ContentDigestAlgorithm
 import org.jetbrains.zip.signer.metadata.ZipMetadata
@@ -29,7 +29,7 @@ object ZipSigner {
             RandomAccessFile(outputFile, "rw").use { outputRandomAccessFile ->
                 outputRandomAccessFile.setLength(0)
                 sign(
-                    FileChannelDataSource(inputRandomAccessFile.channel),
+                    SeekableByteChannelDataSource(inputRandomAccessFile.channel),
                     outputRandomAccessFile.channel,
                     certificates,
                     signatureProvider
@@ -46,7 +46,7 @@ object ZipSigner {
         RandomAccessFile(inputFile, "r").use { inputRandomAccessFile ->
             RandomAccessFile(outputFile, "rw").use { outputRandomAccessFile ->
                 outputRandomAccessFile.setLength(0)
-                val inputDataSource = FileChannelDataSource(inputRandomAccessFile.channel)
+                val inputDataSource = SeekableByteChannelDataSource(inputRandomAccessFile.channel)
                 val inputZipSectionsInformation = ZipUtils.findZipSectionsInformation(inputDataSource)
                 val inputSigningBlock = ZipMetadata.findInZip(inputDataSource, inputZipSectionsInformation)
                 val inputZipSections =
