@@ -4,9 +4,10 @@ import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "1.9.25"
+    kotlin("jvm") version "2.2.10"
     id("maven-publish")
     id("signing")
     id("com.gradleup.shadow") version "8.3.6"
@@ -42,8 +43,8 @@ subprojects {
 
     tasks {
         withType(KotlinCompile::class.java).all {
-            kotlinOptions {
-                jvmTarget = "1.8"
+            compilerOptions {
+                jvmTarget = JvmTarget.JVM_1_8
             }
         }
     }
