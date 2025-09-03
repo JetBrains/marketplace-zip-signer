@@ -1,5 +1,5 @@
 plugins {
-    id("com.google.protobuf") version "0.9.4"
+    id("com.google.protobuf") version "0.9.5"
     id("idea")
     id("com.gradleup.shadow") version "8.3.6"
 }
