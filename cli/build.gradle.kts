@@ -1,7 +1,7 @@
 fun properties(key: String) = project.findProperty(key)?.toString()
 
 plugins {
-    id("org.jetbrains.changelog") version "2.2.1"
+    id("org.jetbrains.changelog") version "2.4.0"
     id("com.github.breadmoirai.github-release") version "2.5.2"
 }
 
