@@ -12,7 +12,6 @@ dependencies {
 }
 
 val protobufGeneratedDir = project.layout.buildDirectory.dir("src/generated")
-val tmpDir = project.layout.buildDirectory.dir("tmp")
 
 idea {
     module {
@@ -30,14 +29,6 @@ protobuf {
 tasks {
     test {
         maxParallelForks = Runtime.getRuntime().availableProcessors()
-
-        val tmpDir = tmpDir
-
-        systemProperties = mapOf(
-            "project.tempDir" to tmpDir.get().asFile.absolutePath
-        )
-
-        finalizedBy("clearTmpDir")
     }
     shadowJar {
         archiveBaseName.set("zip-signer")
@@ -46,8 +37,4 @@ tasks {
         relocate("org.bouncycastle", "thirdparty.bouncycastle")
         relocate("org.intellij", "thirdparty.intellij")
     }
-}
-
-task("clearTmpDir", type = Delete::class) {
-    delete(tmpDir)
 }
