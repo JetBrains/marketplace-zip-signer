@@ -25,7 +25,6 @@ internal object DigestUtils {
         )
     }
 
-
     private fun computeDigest(
         digestAlgorithms: List<ContentDigestAlgorithm>,
         content: List<DataSource>,

@@ -10,17 +10,25 @@ import org.jetbrains.zip.signer.utils.ZipUtils
 import org.jetbrains.zip.signer.verifier.SuccessfulVerificationResult
 import org.jetbrains.zip.signer.verifier.ZipVerifier
 import org.junit.Assert
-import java.io.BufferedReader
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.io.FileInputStream
+import java.nio.file.Files
+import java.nio.file.Path
 import java.security.cert.X509CRL
 import java.security.cert.X509Certificate
 import java.util.*
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
 
 
 open class BaseTest {
+    @get:Rule
+    val tempFolder: TemporaryFolder = TemporaryFolder.builder()
+        .assureDeletion()
+        .build()
+
     companion object {
-        private val tmpDirectory: String = System.getProperty("project.tempDir") ?: "tmp"
         private const val ENTRY_NAME: String = "test.txt"
     }
 
@@ -29,18 +37,18 @@ open class BaseTest {
     )
 
     fun createZip(testFileContent: String, fileName: String) =
-        ZipUtils.generateZipFile("$tmpDirectory/$fileName.zip", ENTRY_NAME, testFileContent)
+        ZipUtils.generateZipFile(createTempZip(fileName), ENTRY_NAME, testFileContent)
 
     fun sign(inputZip: File, signs: List<SignerInfo>) : File {
         val inputName = inputZip.name.substring(0, inputZip.name.length - ".zip".length)
-        val outputFile = File("$tmpDirectory/$inputName-output.zip")
+        val outputFile = createTempZip(inputName).toFile()
         var prevFile = inputZip
 
         signs.forEachIndexed { i, (certificates, privateKey) ->
-            val newFile = File("$tmpDirectory/$inputName-$i.zip")
+            val newFile = createTempZip("$inputName-$i").toFile()
             ZipSigner.sign(
                 prevFile,
-                File("$tmpDirectory/$inputName-$i.zip"),
+                newFile,
                 certificates,
                 DefaultSignatureProvider(
                     PublicKeyUtils.getSuggestedSignatureAlgorithm(certificates[0].publicKey),
@@ -62,8 +70,8 @@ open class BaseTest {
 
     fun createZipAndSignWithChain(testFileContent: String, chain: CertificateChain): File {
         val uuid = UUID.randomUUID().toString()
-        val inputZip = ZipUtils.generateZipFile("$tmpDirectory/$uuid.zip", ENTRY_NAME, testFileContent)
-        val outputFile = File("$tmpDirectory/$uuid-output.zip")
+        val inputZip = ZipUtils.generateZipFile(createTempZip(uuid), ENTRY_NAME, testFileContent)
+        val outputFile = createTempZip("$uuid-output").toFile()
         ZipSigner.sign(inputZip, outputFile, chain.signsChain, DefaultSignatureProvider(
             PublicKeyUtils.getSuggestedSignatureAlgorithm(chain.signCertificate.publicKey), chain.privateKey
         ))
@@ -74,12 +82,12 @@ open class BaseTest {
     fun File.verifyZip(testFileContent: String) {
         Assert.assertTrue("Output zip archive is empty", this.length() != 0.toLong())
 
-        val outputDirectory = File("$tmpDirectory/${this.nameWithoutExtension}")
+        val outputDirectory = createTempDirectory(this.nameWithoutExtension)
         ZipUtils.unzipFile(this, outputDirectory)
 
-        val entries = outputDirectory.listFiles { it -> it.name == ENTRY_NAME }
+        val entries = outputDirectory.listDirectoryEntries().filter { it.name == ENTRY_NAME }
         require(entries.isNotEmpty()) { "There is no file $ENTRY_NAME in unpacked zip directory" }
-        val fileContent = BufferedReader(FileInputStream(entries.first()).reader()).readText()
+        val fileContent = entries.single().toFile().readText()
         Assert.assertThat("File content was corrupted", fileContent, IsEqual.equalTo(testFileContent))
     }
 
@@ -214,4 +222,8 @@ open class BaseTest {
         getResourceFile("keypairs/$keyName"),
         privateKeyPassword = password?.toCharArray()
     )
+
+    private fun createTempZip(prefix: String): Path = Files.createTempFile(tempFolder.root.toPath(), prefix, ".zip")
+
+    private fun createTempDirectory(prefix: String): Path = Files.createTempDirectory(tempFolder.root.toPath(), prefix)
 }

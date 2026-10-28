@@ -5,48 +5,48 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
 
 object ZipUtils {
-    fun generateZipFile(filePath: String, fileName: String, fileContent: String): File {
-        val f = File(filePath)
-        f.parentFile.mkdirs()
-        with(ZipOutputStream(FileOutputStream(f), Charsets.UTF_8)) {
-            putNextEntry(ZipEntry(fileName))
-            write(fileContent.toByteArray())
-            flush()
-            closeEntry()
-            close()
+    fun generateZipFile(path: Path, fileName: String, fileContent: String): File {
+        Files.createDirectories(path.parent)
+        val result = path.toFile()
+        ZipOutputStream(FileOutputStream(result), Charsets.UTF_8).use { output ->
+            with(output) {
+                putNextEntry(ZipEntry(fileName))
+                write(fileContent.toByteArray())
+                flush()
+                closeEntry()
+            }
         }
-        return f
+        return result
     }
 
-    fun unzipFile(zip: File, destDir: File) {
-        require(zip.isFile && zip.extension == "zip") { "Must be a zip archive: $zip" }
-        destDir.mkdirs()
+    fun unzipFile(zipFile: File, destDir: Path) {
+        require(zipFile.isFile && zipFile.extension == "zip") { "Must be a zip archive: $zipFile" }
+        Files.createDirectories(destDir)
 
-        val zipFile = ZipFile(zip)
+        ZipFile(zipFile).use { zip ->
+            val entries = zip.entries()
 
-        val entries = zipFile.entries()
+            while (entries.hasMoreElements()) {
+                val entry = entries.nextElement()
+                val path = destDir.resolve(entry.name)
 
-        while (entries.hasMoreElements()) {
-            val entry = entries.nextElement()
-
-            if (entry.isDirectory) {
-                Files.createDirectories(File("$destDir/${entry.name}").toPath())
-            } else {
-                val file = File("$destDir/${entry.name}")
-                Files.createFile(file.toPath())
-                val inputStream = BufferedInputStream(zipFile.getInputStream(entry))
-                val outputStream = FileOutputStream(file)
-                while (inputStream.available() > 0) {
-                    outputStream.write(inputStream.read())
+                if (entry.isDirectory) {
+                    Files.createDirectories(path)
+                } else {
+                    Files.createDirectories(path.parent)
+                    BufferedInputStream(zip.getInputStream(entry)).use { input ->
+                        FileOutputStream(path.toFile()).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
                 }
-                inputStream.close()
-                outputStream.close()
             }
         }
     }
