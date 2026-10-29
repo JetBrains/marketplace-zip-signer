@@ -223,7 +223,7 @@ open class BaseTest {
         privateKeyPassword = password?.toCharArray()
     )
 
-    private fun createTempZip(prefix: String): Path = Files.createTempFile(tempFolder.root.toPath(), prefix, ".zip")
+    protected fun createTempZip(prefix: String): Path = Files.createTempFile(tempFolder.root.toPath(), prefix, ".zip")
 
-    private fun createTempDirectory(prefix: String): Path = Files.createTempDirectory(tempFolder.root.toPath(), prefix)
+    protected fun createTempDirectory(prefix: String): Path = Files.createTempDirectory(tempFolder.root.toPath(), prefix)
 }

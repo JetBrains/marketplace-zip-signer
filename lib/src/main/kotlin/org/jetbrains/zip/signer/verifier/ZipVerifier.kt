@@ -122,17 +122,23 @@ object ZipVerifier {
     }
 
     internal fun checkDigests(zipSections: ZipSections, zipMetadata: ZipMetadata) {
+        if (zipMetadata.digests.isEmpty()) {
+            throw ZipVerificationException("No content digests in ZIP metadata")
+        }
+
+        val digestAlgorithms = zipMetadata.digests.map { it.algorithm }.distinct()
         val actualContentDigests = try {
-            DigestUtils.computeDigest(zipMetadata.digests.map { it.algorithm }, zipSections)
+            DigestUtils.computeDigest(digestAlgorithms, zipSections).associateBy { it.algorithm }
         } catch (e: DigestException) {
             throw ZipVerificationException("Failed to compute content digests: ${e.message}", e)
         }
 
-        actualContentDigests.forEach { digest ->
-            val expectedDigest = zipMetadata.digests.find { it.algorithm == digest.algorithm }
-                ?: throw RuntimeException("Missing ${digest.algorithm} digest in metadata")
-            if (!expectedDigest.digestBytes.contentEquals(digest.digestBytes)) {
-                throw ZipVerificationException("ZIP integrity check failed. ${digest.algorithm}s digest mismatch.")
+        zipMetadata.digests.forEach { d ->
+            val actualDigest = actualContentDigests[d.algorithm]
+                ?: throw ZipVerificationException("Missing ${d.algorithm} computed digest")
+
+            if (!actualDigest.digestBytes.contentEquals(d.digestBytes)) {
+                throw ZipVerificationException("ZIP integrity check failed. ${d.algorithm} digest mismatch.")
             }
         }
     }
