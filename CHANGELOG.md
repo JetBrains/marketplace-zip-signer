@@ -1,5 +1,8 @@
 # Marketplace ZIP Signer Changelog
 
+## next
+- CLI: Add `unsign` command, which removes the signing block and restores the zip as it was before signing
+
 ## 0.1.7
 - CLI: Rename `key` and `cert` signing options accepting paths to files to `key-file` and `cert-file`
 - CLI: Introduce `key` and `cert` signing options for string values

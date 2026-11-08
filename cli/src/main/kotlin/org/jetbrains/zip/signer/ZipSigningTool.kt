@@ -20,7 +20,7 @@ object ZipSigningTool {
     @JvmStatic
     fun main(args: Array<String>) {
         if (args.isEmpty()) {
-            System.err.println("Command is not specified: `sign` and `verify` commands are supported.")
+            System.err.println("Command is not specified: `sign`, `verify` and `unsign` commands are supported.")
             exitProcess(1)
         }
         val command = args[0]
@@ -28,8 +28,9 @@ object ZipSigningTool {
         when (command) {
             "sign" -> sign(restParameters)
             "verify" -> verify(restParameters)
+            "unsign" -> unsign(restParameters)
             else -> {
-                System.err.println("Unknown command `$command`: `sign` commands are supported.")
+                System.err.println("Unknown command `$command`: `sign`, `verify` and `unsign` commands are supported.")
                 exitProcess(1)
             }
         }
@@ -96,6 +97,12 @@ object ZipSigningTool {
         }
     }
 
+    private fun unsign(params: Array<String>) {
+        val options = UnsignOptions()
+        Args.parseOrExit(options, params)
+        ZipSigner.unsign(File(options.inputFilePath), File(options.outputFilePath))
+    }
+
     private fun exitWithError(message: String) {
         System.err.println(message)
         exitProcess(-1)
@@ -146,4 +153,12 @@ class VerifyOptions {
 
     @set:Argument("cert", required = true, description = "Certificate file")
     var certificateFile: String = ""
+}
+
+class UnsignOptions {
+    @set:Argument("in", required = true, description = "Path to signed zip file")
+    var inputFilePath: String = ""
+
+    @set:Argument("out", required = true, description = "Path to the zip file without its signing block")
+    var outputFilePath: String = ""
 }
